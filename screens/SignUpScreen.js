@@ -1,157 +1,375 @@
-import {
-    View, Text, ActivityIndicator, TouchableOpacity, Image, TextInput,
-    ScrollView, Alert,
-} from 'react-native';
 import React, { useState } from 'react';
-import { themeColors } from '../theme';
+import { 
+  View, Text, TouchableOpacity, Image, TextInput, 
+  StyleSheet, Dimensions, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Alert
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeftIcon } from 'react-native-heroicons/solid';
 import { useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { 
+  UserIcon, EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, 
+  ChevronLeftIcon 
+} from 'react-native-heroicons/outline';
+import { FontAwesome } from '@expo/vector-icons';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '../constants/firebase';
 import Toast from 'react-native-root-toast';
 
+const { width, height } = Dimensions.get('window');
+
+const GridBackground = () => (
+    <View style={styles.gridContainer}>
+      {[...Array(20)].map((_, i) => (
+        <View key={`v-${i}`} style={[styles.gridLineV, { left: (width / 10) * i }]} />
+      ))}
+      {[...Array(20)].map((_, i) => (
+        <View key={`h-${i}`} style={[styles.gridLineH, { top: (height / 20) * i }]} />
+      ))}
+    </View>
+);
+
 export default function SignUpScreen() {
-    const navigation = useNavigation();
-    const [fullName, setFullName] = useState('');
-    const [email, setEmail] = useState('');
-    const [phoneNumber, setphoneNumber] = useState('');
-    const [password, setPassword] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
+  const navigation = useNavigation();
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
 
-    const validateEmail = (email) => {
-        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return re.test(email);
-    };
+  const validateEmail = (email) => {
+      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return re.test(email);
+  };
 
-    const handleSubmit = async () => {
-        if (fullName && email && phoneNumber && password) {
-            if (!validateEmail(email)) {
-                Alert.alert('Invalid Email', 'Please enter a valid email address');
-                return;
-            }
+  const handleSubmit = async () => {
+    if (fullName && email && password) {
+      if (!validateEmail(email)) {
+        Alert.alert('Invalid Email', 'Please enter a valid email address');
+        return;
+      }
+      if (!agreeToTerms) {
+        Alert.alert('Agreement Required', 'Please agree to the Terms and Conditions');
+        return;
+      }
 
-            try {
-                setIsLoading(true);
-                setError('');
+      try {
+        setIsLoading(true);
+        
+        // Check if email already exists
+        const emailQuery = query(collection(db, 'users'), where('email', '==', email));
+        const emailQuerySnapshot = await getDocs(emailQuery);
 
-                // Check if email already exists
-                const emailQuery = query(collection(db, 'users'), where('email', '==', email));
-                const emailQuerySnapshot = await getDocs(emailQuery);
-
-                if (!emailQuerySnapshot.empty) {
-                    setIsLoading(false);
-                    Toast.show('Email already exists', { duration: Toast.durations.SHORT });
-                    return;
-                }
-
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
-
-                if (user) {
-                    await addDoc(collection(db, 'users'), {
-                        uid: user.uid,
-                        fullName: fullName,
-                        email: email,
-                        phoneNumber: phoneNumber,
-                        home_address: '',
-                    });
-                    setIsLoading(false);
-                    navigation.navigate('Home');
-                } else {
-                    setError('User not found after signup.');
-                    console.log('User not found after signup.');
-                }
-            } catch (error) {
-                setIsLoading(false);
-                setError(error.message);
-                console.error('Error caught:', error);
-            }
-        } else {
-            Alert.alert('Incomplete Form', 'Please fill in all fields');
+        if (!emailQuerySnapshot.empty) {
+            setIsLoading(false);
+            Toast.show('Email already exists', { duration: Toast.durations.SHORT });
+            return;
         }
-    };
 
-    return (
-        <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-            <View className="flex-1 bg-white" style={{ backgroundColor: themeColors.bg }}>
-                <SafeAreaView className="flex">
-                    <View className="flex-row justify-start">
-                        <TouchableOpacity
-                            onPress={() => navigation.goBack()}
-                            className="bg-yellow-400 p-2 rounded-tr-2xl rounded-bl-2xl ml-4 shadow-lg"
-                        >
-                            <ArrowLeftIcon size="20" color="black" />
-                        </TouchableOpacity>
-                    </View>
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-                    <View className="flex-row justify-center">
-                        <Image source={require('../assets/images/signup.png')} style={{ width: 165, height: 110 }} />
-                    </View>
+        if (user) {
+            await addDoc(collection(db, 'users'), {
+                uid: user.uid,
+                fullName: fullName,
+                email: email,
+                phoneNumber: '', // Removed from UI but keeping in DB schema if needed
+                home_address: '',
+                createdAt: new Date().toISOString()
+            });
+            setIsLoading(false);
+            navigation.navigate('Home');
+        }
+      } catch (err) {
+        setIsLoading(false);
+        Alert.alert('Error', err.message);
+      }
+    } else {
+      Alert.alert('Incomplete Form', 'Please fill in all fields');
+    }
+  };
 
-                    <View className="flex-row justify-center mb-4">
-                        <Text className="text-white font-bold text-2xl">Create Account</Text>
-                    </View>
-                </SafeAreaView>
+  return (
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['#8B6F00', '#000000']}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 0.5 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <GridBackground />
 
-                <View
-                    className="flex-1 bg-white px-8 pt-8"
-                    style={{
-                        borderTopLeftRadius: 50,
-                        borderTopRightRadius: 50,
-                    }}
-                >
-                    <View className="form space-y-2">
-                        <TextInput
-                            className="p-4 bg-gray-100 text-gray-700 rounded-2xl mb-3 border border-gray-300"
-                            placeholder="Enter Your Fullname"
-                            value={fullName}
-                            onChangeText={(value) => setFullName(value)}
-                        />
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          <ScrollView contentContainerStyle={{ flexGrow: 1 }} bounces={false} showsVerticalScrollIndicator={false}>
+            {/* Header section */}
+            <View style={styles.header}>
+              <TouchableOpacity 
+                onPress={() => navigation.goBack()}
+                style={styles.backButton}
+              >
+                <ChevronLeftIcon size={24} color="white" />
+              </TouchableOpacity>
+              
+              <View style={styles.logoContainer}>
+                <Image 
+                  source={require('../assets/images/signup.png')} 
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+              </View>
 
-                        <TextInput
-                            className="p-4 bg-gray-100 text-gray-700 rounded-2xl mb-3 border border-gray-300"
-                            value={email}
-                            onChangeText={(value) => setEmail(value)}
-                            placeholder="Enter Your Email"
-                        />
-
-                        <TextInput
-                            className="p-4 bg-gray-100 text-gray-700 rounded-2xl mb-3 border border-gray-300"
-                            value={phoneNumber}
-                            onChangeText={(value) => setphoneNumber(value)}
-                            placeholder="Enter Your Phone number"
-                        />
-
-                        <TextInput
-                            className="p-4 bg-gray-100 text-gray-700 rounded-2xl mb-7 border border-gray-300"
-                            secureTextEntry
-                            value={password}
-                            onChangeText={(value) => setPassword(value)}
-                            placeholder="Enter Your Password"
-                        />
-
-                        <TouchableOpacity className="py-3 bg-yellow-400 rounded-xl shadow-lg" onPress={handleSubmit}>
-                            {isLoading ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text style={{ textAlign: 'center', color: 'white', fontSize: 20, fontWeight: 'bold' }}>
-                                    Sign Up
-                                </Text>
-                            )}
-                        </TouchableOpacity>
-                    </View>
-
-                    <View style={{ paddingBottom: 20 }} className="flex-row justify-center mt-7">
-                        <Text className="text-gray-500 font-semibold">Already have an account?</Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                            <Text className="font-semibold text-yellow-500"> Login</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
+              <Text style={styles.title}>Create Account</Text>             
             </View>
-        </ScrollView>
-    );
+
+            {/* Form section */}
+            <View style={styles.formContainer}>
+              <View style={styles.inputWrapper}>
+                <Text style={styles.label}>Full Name</Text>
+                <View style={styles.inputContainer}>
+                  <UserIcon size={20} color="#666" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="David Johnson"
+                    placeholderTextColor="#999"
+                    value={fullName}
+                    onChangeText={setFullName}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputWrapper}>
+                <Text style={styles.label}>Email Address</Text>
+                <View style={styles.inputContainer}>
+                  <EnvelopeIcon size={20} color="#666" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="davidjonson@gmail.com"
+                    placeholderTextColor="#999"
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputWrapper}>
+                <Text style={styles.label}>Enter Password</Text>
+                <View style={styles.inputContainer}>
+                  <LockClosedIcon size={20} color="#666" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="xxxxxxxxxx"
+                    placeholderTextColor="#999"
+                    secureTextEntry={!showPassword}
+                    value={password}
+                    onChangeText={setPassword}
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                    {showPassword ? (
+                      <EyeIcon size={20} color="#666" />
+                    ) : (
+                      <EyeSlashIcon size={20} color="#666" />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.row}>
+                <TouchableOpacity 
+                    style={styles.checkboxRow}
+                    onPress={() => setAgreeToTerms(!agreeToTerms)}
+                >
+                  <View style={[styles.checkbox, agreeToTerms && styles.checkboxActive]} />
+                  <Text style={styles.checkboxText}>
+                    I agree to the <Text style={styles.linkText}>Terms & Conditions</Text> and <Text style={styles.linkText}>Privacy Policy</Text>
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity 
+                style={styles.submitButton}
+                onPress={handleSubmit}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="black" />
+                ) : (
+                  <Text style={styles.submitButtonText}>Create Account</Text>
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>Already have an account? </Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                  <Text style={styles.footerLink}>Log In</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'black',
+  },
+  gridContainer: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.15,
+  },
+  gridLineV: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 0.5,
+    backgroundColor: 'white',
+  },
+  gridLineH: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 0.5,
+    backgroundColor: 'white',
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    alignItems: 'center',
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    padding: 8,
+    borderRadius: 12,
+  },
+  logoContainer: {
+    marginTop: 5,
+    marginBottom: 10,
+  },
+  logo: {
+    width: 120,
+    height: 120,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  formContainer: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    paddingHorizontal: 30,
+    paddingTop: 30,
+    paddingBottom: 40,
+  },
+  inputWrapper: {
+    marginBottom: 15,
+  },
+  label: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 25,
+    paddingHorizontal: 15,
+    height: 55,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 25,
+    marginTop: 5,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 20,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginRight: 10,
+  },
+  checkboxActive: {
+    backgroundColor: '#FFC107',
+    borderColor: '#FFC107',
+  },
+  checkboxText: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 18,
+  },
+  linkText: {
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  submitButton: {
+    backgroundColor: '#FFC107',
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 25,
+    shadowColor: '#FFC107',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  submitButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'black',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  footerText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  footerLink: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+});
+
