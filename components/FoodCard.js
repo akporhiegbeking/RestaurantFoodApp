@@ -21,7 +21,7 @@ export default function FoodCard({item, index}) {
         quantity: 1,
         price: item.price,
         name: item.name,  
-        imageURL: item.imageURL, 
+        imageUrl: item.imageUrl, 
       });
       Toast.show('Item added to cart!', {
         duration: Toast.durations.SHORT,
@@ -41,16 +41,16 @@ export default function FoodCard({item, index}) {
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => navigation.navigate('FoodDetails', {...item})}
-        style={styles.imageContainer}
+        style={styles.glassTop}
       >
         <Image 
-          source={{ uri: item.imageURL }} 
+          source={{ uri: item.imageUrl }} 
           style={styles.image}
           resizeMode="contain"
         />
       </TouchableOpacity>
 
-      <View style={styles.content}>
+      <View style={styles.bottomSection}>
         <Text style={styles.name} numberOfLines={1}>
           {item.name}
         </Text>
@@ -61,10 +61,11 @@ export default function FoodCard({item, index}) {
         <View style={styles.footer}>
           <Text style={styles.price}>₦ {item.price}</Text>
           <TouchableOpacity
+            activeOpacity={0.7}
             style={styles.cartButton}
             onPress={handleAddToCart}
           >
-            <ShoppingBagIcon size={20} color="black" />
+            <ShoppingBagIcon size={18} color="white" />
           </TouchableOpacity>
         </View>
       </View>
@@ -75,40 +76,48 @@ export default function FoodCard({item, index}) {
 const styles = StyleSheet.create({
   card: {
     width: cardWidth,
-    backgroundColor: '#1E293B', // Dark Navy/Slate
-    borderRadius: 30,
-    marginBottom: 20,
-    padding: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)', // Glassmorphism base
+    borderRadius: 35,
+    marginBottom: 25,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.1,
     shadowRadius: 15,
-    elevation: 10,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)', // Glass border
   },
-  imageContainer: {
+  glassTop: {
+    height: 130,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: -20,
-    marginBottom: 10,
+    padding: 10,
   },
   image: {
-    width: 110,
-    height: 110,
+    width: '100%',
+    height: '100%',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 4,
+  bottomSection: {
+    backgroundColor: 'white',
+    padding: 14,
+    paddingTop: 10,
   },
   name: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 4,
+    color: '#1F2937', // Darker gray/black for contrast on white
+    marginBottom: 2,
   },
   description: {
-    fontSize: 12,
-    color: '#94A3B8',
+    fontSize: 11,
+    color: '#64748B',
     marginBottom: 12,
-    lineHeight: 16,
+    lineHeight: 15,
+    height: 30, // Keep consistent height
   },
   footer: {
     flexDirection: 'row',
@@ -116,17 +125,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   price: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#111827',
   },
   cartButton: {
-    backgroundColor: 'white',
+    backgroundColor: '#001F33', // Dark matching the app theme
     padding: 10,
-    borderRadius: 20,
+    borderRadius: 18,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    elevation: 3,
+    shadowOpacity: 0.2,
+    elevation: 5,
   }
 });
 

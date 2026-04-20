@@ -5,6 +5,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../constants/firebase';
 import { MaterialIcons } from '@expo/vector-icons';
 import { ChevronLeftIcon } from 'react-native-heroicons/solid';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const OrdersListScreen = () => {
   const [orders, setOrders] = useState([]);
@@ -40,7 +41,7 @@ const OrdersListScreen = () => {
 
   const renderItem = ({ item }) => (
     <View style={styles.orderItem}>
-      <Image source={{ uri: item.imageURL || 'https://via.placeholder.com/150' }} style={styles.image} />
+      <Image source={{ uri: item.imageUrl || 'https://via.placeholder.com/150' }} style={styles.image} />
       <View style={styles.orderInfo}>
         <Text style={styles.orderName}>{item.name}</Text>
         <Text style={styles.orderId}>Order #{item.orderId}</Text>
@@ -54,14 +55,14 @@ const OrdersListScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#0000ff" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ChevronLeftIcon size="23" color="white" />
@@ -80,7 +81,7 @@ const OrdersListScreen = () => {
           contentContainerStyle={styles.listContainer}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 

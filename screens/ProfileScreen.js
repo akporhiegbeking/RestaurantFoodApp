@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-  Image,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, 
+  ActivityIndicator, Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../constants/firebase';
-import { MaterialIcons, Ionicons, AntDesign } from '@expo/vector-icons';
 import { getDocs, query, collection, where } from 'firebase/firestore';
-import { ChevronLeftIcon } from 'react-native-heroicons/solid';
+import { 
+  Bars3Icon, ChevronLeftIcon, UserCircleIcon, ShoppingBagIcon,
+  ArrowLeftOnRectangleIcon, ChevronRightIcon, HeartIcon
+} from 'react-native-heroicons/outline';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Animatable from 'react-native-animatable';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
@@ -51,136 +51,185 @@ const ProfileScreen = () => {
 
   const handleLogout = async () => {
     await signOut(auth);
-    navigation.replace('Login');
+    await AsyncStorage.clear();
+    navigation.replace('LoginScreen');
   };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
+        <ActivityIndicator size="large" color="#F59E0B" />
       </View>
     );
   }
 
-  const handleMenuPress = (itemName) => {
-    const trimmedItemName = itemName.trim();
-    console.log(`Menu item clicked: ${trimmedItemName}`);
-    if (trimmedItemName === 'Orders') {
-      console.log('Navigating to OrdersListScreen');
-      navigation.navigate('OrdersList');
-    } else if (trimmedItemName === 'Edit Profile') {
-      console.log('Navigating to EditProfile');
-      navigation.navigate('EditProfile');
-    } else if (trimmedItemName === 'Saved Items') {
-      console.log('Navigating to SavedItems');
-      navigation.navigate('SavedItems');
-    } else {
-      console.log('Item name does not match any navigation case');
-    }
-  };
-
-  // const handleMenuPress = (itemName) => {
-  //   const trimmedItemName = itemName.trim();
-  //   console.log(`Menu item clicked: ${trimmedItemName}`);
-  //   if (trimmedItemName === 'Edit Profile') {
-  //     console.log('Navigating to EditProfile');
-  //     console.log('Navigation object:', navigation);
-  //     navigation.navigate('EditProfile');
-  //   }  else {
-  //     console.log('Item name does not match');
-  //   }
-  // };
-
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} className="bg-white rounded-2xl p-3 shadow">
-          <ChevronLeftIcon size="23" stroke={50} color="black" />
-        </TouchableOpacity>
-
-        <Image
-          className="h-12 w-12 rounded-2xl"
-          source={require('../assets/images/avatar.png')}
-          style={{ backgroundColor: 'rgba(255,255,255,0.7)' }}
-        />
-        <Text style={styles.welcomeText}>Welcome, {userData.fullName || ''}</Text>
-        <Text style={styles.emailText}>{userData.email || ''}</Text>
-      </View>
-
-      <View style={styles.menu}>
-        {menuItems.map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.menuItem}
-            onPress={() => handleMenuPress(item.name)}
+    <View style={{ flex: 1 }}>
+      <LinearGradient
+        colors={['#FFD700', '#F59E0B', '#FFFFFF', '#001F33']}
+        locations={[0, 0.1, 0.3, 0.7]}
+        style={{ position: 'absolute', width: '100%', height: '100%' }}
+      />
+      
+      <SafeAreaView style={{ flex: 1 }}>
+        {/* Top Header / Back Button */}
+        <Animatable.View 
+          animation="fadeInLeft"
+          duration={600}
+          style={{ paddingHorizontal: 20, paddingTop: 10 }}
+        >
+          <TouchableOpacity 
+            onPress={() => navigation.goBack()} 
+            style={{ 
+              backgroundColor: 'white', 
+              padding: 10, 
+              borderRadius: 20, 
+              width: 50,
+              elevation: 5,
+              shadowColor: '#000',
+              shadowOpacity: 0.1,
+              shadowRadius: 10
+            }}
           >
-            {item.icon}
-            <Text style={styles.menuItemText}>{item.name}</Text>
+            <ChevronLeftIcon size={24} color="black" />
           </TouchableOpacity>
-        ))}
-      </View>
+        </Animatable.View>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutButtonText}>Logout</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+          {/* Profile Section */}
+          <Animatable.View 
+            animation="fadeInDown" 
+            duration={800}
+            style={{ alignItems: 'center', marginTop: 20 }}
+          >
+            <View style={{ 
+              backgroundColor: 'white', 
+              padding: 4, 
+              borderRadius: 60,
+              shadowColor: '#000',
+              shadowOpacity: 0.2,
+              shadowRadius: 20,
+              elevation: 10
+            }}>
+              <Image 
+                source={userData.imageUrl ? { uri: userData.imageUrl } : require('../assets/images/avatar.png')} 
+                style={{ height: 110, width: 110, borderRadius: 55 }}
+              />
+            </View>
+            <View style={{ alignItems: 'center', marginTop: 15 }}>
+              <Animatable.Text 
+                animation="fadeIn" 
+                delay={400}
+                style={{ fontSize: 28, fontWeight: 'bold', color: '#1A1A1A' }}
+              >
+                {userData.fullName || 'Guest User'}
+              </Animatable.Text>
+              <Animatable.Text 
+                animation="fadeIn" 
+                delay={500}
+                style={{ fontSize: 16, color: '#666', marginTop: 4 }}
+              >
+                {userData.email || 'guest@example.com'}
+              </Animatable.Text>
+            </View>
+          </Animatable.View>
+
+          {/* Quick Actions / Stats row can be added here if needed */}
+
+          {/* Menu Options Group */}
+          <Animatable.View 
+            animation="fadeInUp" 
+            delay={300}
+            style={{ 
+              marginHorizontal: 20, 
+              marginTop: 40, 
+              backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+              borderRadius: 30,
+              padding: 10,
+              shadowColor: '#000',
+              shadowOpacity: 0.05,
+              shadowRadius: 20,
+              elevation: 5
+            }}
+          >
+            {[
+              { name: 'Orders', icon: <ShoppingBagIcon size={24} color="#F59E0B" />, screen: 'OrdersList' },
+              { name: 'Saved Items', icon: <HeartIcon size={24} color="#F59E0B" />, screen: 'SavedItems' },
+              { name: 'Edit Profile', icon: <UserCircleIcon size={24} color="#F59E0B" />, screen: 'EditProfile' }
+            ].map((item, index, array) => (
+              <TouchableOpacity
+                key={index}
+                activeOpacity={0.7}
+                style={{ 
+                  flexDirection: 'row', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  padding: 20,
+                  borderBottomWidth: index === array.length - 1 ? 0 : 1,
+                  borderBottomColor: '#F3F4F6'
+                }}
+                onPress={() => navigation.navigate(item.screen)}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ 
+                    backgroundColor: '#FFFBEB', 
+                    padding: 8, 
+                    borderRadius: 12, 
+                    marginRight: 15 
+                  }}>
+                    {item.icon}
+                  </View>
+                  <Text style={{ fontSize: 18, fontWeight: '600', color: '#1F2937' }}>
+                    {item.name}
+                  </Text>
+                </View>
+                <ChevronRightIcon size={20} color="#9CA3AF" />
+              </TouchableOpacity>
+            ))}
+          </Animatable.View>
+
+          {/* Support Section could be added here */}
+
+          {/* Logout Section */}
+          <Animatable.View 
+            animation="fadeInUp" 
+            delay={500}
+            style={{ marginHorizontal: 20, marginTop: 40 }}
+          >
+            <TouchableOpacity 
+              onPress={handleLogout}
+              activeOpacity={0.8}
+              style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                backgroundColor: '#EF4444', 
+                paddingVertical: 18, 
+                borderRadius: 25,
+                shadowColor: '#EF4444',
+                shadowOpacity: 0.3,
+                shadowRadius: 15,
+                elevation: 10
+              }}
+            >
+              <ArrowLeftOnRectangleIcon size={22} color="white" />
+              <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold', marginLeft: 10 }}>
+                Logout
+              </Text>
+            </TouchableOpacity>
+          </Animatable.View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
-const menuItems = [
-  { name: 'Orders', icon: <MaterialIcons name="list-alt" size={24} color="black" /> },
-  { name: 'Saved Items', icon: <Ionicons name="heart-outline" size={24} color="black" /> },
-  { name: 'Edit Profile', icon: <AntDesign name="user" size={24} color="black" /> },
-];
-
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    backgroundColor: '#fff',
-    padding: 20,
-    marginTop: 50,
-  },
-  header: {
-    marginBottom: 20,
-  },
-  welcomeText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  emailText: {
-    fontSize: 16,
-    color: 'gray',
-  },
-  menu: {
-    borderTopWidth: 1,
-    borderColor: '#f0f0f0',
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderColor: '#f0f0f0',
-  },
-  menuItemText: {
-    marginLeft: 15,
-    fontSize: 16,
-  },
-  logoutButton: {
-    marginTop: 20,
-    padding: 15,
-    backgroundColor: 'red',
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  logoutButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'white'
   },
 });
 

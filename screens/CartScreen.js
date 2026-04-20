@@ -1,11 +1,6 @@
 import { 
-  View, 
-  Text, 
-  StyleSheet,
-  TouchableOpacity,
-  FlatList,
-  Image,
-  ActivityIndicator,
+  View, Text, StyleSheet, TouchableOpacity, FlatList,
+  Image, ActivityIndicator,
 } from 'react-native';
 import { auth, db } from '../constants/firebase';
 import { useNavigation } from '@react-navigation/native';
@@ -13,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, getDoc, getDocs, query, where, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import Toast from 'react-native-root-toast';
 import { ChevronLeftIcon } from 'react-native-heroicons/solid';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CartScreen = () => {
   const navigation = useNavigation();
@@ -124,7 +120,7 @@ const CartScreen = () => {
 
   const renderCartItem = ({ item }) => (
     <View style={styles.cartItem}>
-      <Image source={{ uri: item.imageURL }} style={styles.itemImage} />
+      <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
 
       <View style={styles.itemDetails}>
         <Text style={styles.itemName}>{item.name}</Text>

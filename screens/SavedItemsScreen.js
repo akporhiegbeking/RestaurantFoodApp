@@ -1,18 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  FlatList,
-  Image,
-  ActivityIndicator,
+  View, Text, StyleSheet, TouchableOpacity,
+  FlatList, Image, ActivityIndicator,
 } from 'react-native';
 import { auth, db } from '../constants/firebase';
 import { useNavigation } from '@react-navigation/native';
 import { collection, getDocs, query, where, deleteDoc, doc } from 'firebase/firestore';
 import Toast from 'react-native-root-toast';
 import { ChevronLeftIcon } from 'react-native-heroicons/solid';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SavedItemsScreen = () => {
   const navigation = useNavigation();
@@ -60,7 +56,7 @@ const SavedItemsScreen = () => {
 
   const renderSavedItem = ({ item }) => (
     <View style={styles.savedItem}>
-      <Image source={{ uri: item.imageURL }} style={styles.itemImage} />
+      <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
       <View style={styles.itemDetails}>
         <Text style={styles.itemName}>{item.name}</Text>
         <Text style={styles.itemPrice}>₦ {item.price}</Text>
@@ -72,7 +68,7 @@ const SavedItemsScreen = () => {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
           <ChevronLeftIcon size="23" color="white" />
@@ -96,7 +92,7 @@ const SavedItemsScreen = () => {
           contentContainerStyle={styles.listContainer}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 

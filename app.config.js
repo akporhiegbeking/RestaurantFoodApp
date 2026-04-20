@@ -33,7 +33,26 @@ export default {
       // apiUrl: process.env.API_URL,
     },
     plugins: [
-      "expo-font"
+      "expo-font",
+      "expo-asset",
+      "expo-mail-composer",
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          photosPermission:
+            "The app accesses your photos to let you share them with your friends.",
+        },
+      ],
+      [
+        "expo-notifications",
+        {
+          icon: "./assets/images/icon.png",
+          color: "#0A66C2",
+          sounds: [],
+          modes: ["alwaysSendAsAndroidManaged"],
+        },
+      ],
     ]
   }
 };

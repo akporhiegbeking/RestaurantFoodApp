@@ -15,6 +15,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '../constants/firebase';
 import Toast from 'react-native-root-toast';
+import * as Device from 'expo-device';
 
 const { width, height } = Dimensions.get('window');
 
@@ -71,12 +72,44 @@ export default function SignUpScreen() {
         const user = userCredential.user;
 
         if (user) {
+            // Get user count for image rotation
+            const userQuery = query(collection(db, 'users'));
+            const snapshot = await getDocs(userQuery);
+            const userCount = snapshot.size;
+
+            const bskyUrl = "https://cdn.bsky.app/img/avatar/plain/did:plc:tn7tnmk654ejtpeoamr5orz6/bafkreiauu7kymx2sxctfzmfy53ge3wu5mfk56amnz7mensw5ypf7c2btba";
+            const dicebearUrl = `https://api.dicebear.com/6.x/pixel-art/png?seed=${encodeURIComponent(fullName)}`;
+            const imageUrl = userCount % 2 === 0 ? bskyUrl : dicebearUrl;
+
+            // Get Location via ipinfo (fallback suggested)
+            let locationStr = 'Unknown Location';
+            try {
+                const locResponse = await fetch('https://ipinfo.io?token=90883ca1824185');
+                const locData = await locResponse.json();
+                if (locData.city) {
+                    locationStr = `${locData.city}, ${locData.region || ''}, ${locData.country || ''}`;
+                }
+            } catch (e) {
+                console.warn('Location fetch failed:', e);
+            }
+
+            // Get Device Info
+            const deviceInfo = {
+                brand: Device.brand,
+                modelName: Device.modelName,
+                osName: Device.osName,
+                osVersion: Device.osVersion,
+                deviceName: Device.deviceName,
+            };
+
             await addDoc(collection(db, 'users'), {
                 uid: user.uid,
                 fullName: fullName,
                 email: email,
-                phoneNumber: '', // Removed from UI but keeping in DB schema if needed
-                home_address: '',
+                imageUrl: imageUrl,
+                phoneNumber: '', 
+                home_address: locationStr, // Populated from API
+                deviceInfo: deviceInfo, // New field
                 createdAt: new Date().toISOString()
             });
             setIsLoading(false);
