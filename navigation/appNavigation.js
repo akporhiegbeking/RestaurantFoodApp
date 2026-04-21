@@ -6,6 +6,7 @@ import { LogBox, ActivityIndicator, View } from 'react-native';
 import FoodDetailsScreen from '../screens/FoodDetailsScreen';
 import LoginScreen from '../screens/LoginScreen';
 import SignUpScreen from '../screens/SignUpScreen';
+import WelcomeScreen from '../screens/WelcomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CartScreen from '../screens/CartScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
@@ -27,14 +28,14 @@ export default function AppNavigation() {
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#0000ff" />
+        <ActivityIndicator size="large" color="#FFC107" />
       </View>
     );
   }
 
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName={user ? 'Home' : 'Login'}>
+      <Stack.Navigator initialRouteName={user ? 'Home' : 'Welcome'}>
         {user ? (
           <>
             <Stack.Screen name="Home" options={{headerShown: false}} component={HomeScreen} />
@@ -49,6 +50,7 @@ export default function AppNavigation() {
           </>
         ) : (
           <>
+            <Stack.Screen name="Welcome" options={{headerShown: false}} component={WelcomeScreen} />
             <Stack.Screen name="Login" options={{headerShown: false}} component={LoginScreen} />
             <Stack.Screen name="SignUp" options={{headerShown: false}} component={SignUpScreen} />
           </>

@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { 
   ShoppingBagIcon, MagnifyingGlassIcon, AdjustmentsHorizontalIcon, UserIcon,
-  DocumentTextIcon
+  DocumentTextIcon, ChevronRightIcon
 } from 'react-native-heroicons/outline';
 import { LinearGradient } from 'expo-linear-gradient';
 import FoodCard from '../components/FoodCard';
@@ -130,7 +130,10 @@ export default function HomeScreen() {
                 />
               </View>
               <View>
-                <Text style={{ fontSize: 14, color: 'rgba(0,0,0,0.6)', fontWeight: '500' }}>Welcome back,</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={{ fontSize: 14, color: 'rgba(0,0,0,0.6)', fontWeight: '500' }}>Welcome back,</Text>
+                  <ChevronRightIcon size={20} color="rgba(0,0,0,0.4)" style={{ fontWeight: 'bold'}} />
+                </View>
                 <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1A1A1A' }}>
                   {userData?.fullName?.split(' ')[0] || 'Guest'}
                 </Text>

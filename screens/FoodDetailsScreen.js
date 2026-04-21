@@ -14,7 +14,8 @@ import { useNavigation } from '@react-navigation/native';
 import * as Animatable from 'react-native-animatable';
 import { auth, db } from '../constants/firebase';
 import { 
-    collection, getDocs, addDoc, query, where, deleteDoc, doc, updateDoc 
+    collection, getDocs, addDoc, query, where, deleteDoc, doc, updateDoc,
+    onSnapshot 
 } from 'firebase/firestore';
 import Toast from 'react-native-root-toast';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -28,6 +29,7 @@ export default function FoodDetailsScreen(props) {
     const [liked, setLiked] = useState(false);
     const [quantity, setQuantity] = useState(1);
     const [cartItemId, setCartItemId] = useState(null);
+    const [foodData, setFoodData] = useState(item);
 
     useEffect(() => {
         const initializeQuantityAndCartStatus = async () => {
@@ -87,6 +89,18 @@ export default function FoodDetailsScreen(props) {
 
         initializeQuantityAndCartStatus();
         checkIfLiked();
+
+        // 3. Real-time listener for food availability and updates
+        const foodDocRef = doc(db, 'foods', item.id);
+        const unsubscribe = onSnapshot(foodDocRef, (doc) => {
+            if (doc.exists()) {
+                setFoodData({ id: doc.id, ...doc.data() });
+            }
+        }, (error) => {
+            console.error("Error listening to food updates: ", error);
+        });
+
+        return () => unsubscribe();
     }, []);
 
     const syncQuantity = async (newQuantity) => {
@@ -256,6 +270,30 @@ export default function FoodDetailsScreen(props) {
                         >
                             {item.name}
                         </Animatable.Text>
+
+                        {/* Availability Status */}
+                        <Animatable.View 
+                            animation="fadeInUp"
+                            delay={400}
+                            style={{ 
+                                marginTop: 8, 
+                                paddingHorizontal: 12, 
+                                paddingVertical: 6, 
+                                borderRadius: 15, 
+                                backgroundColor: foodData.isAvailable !== false ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                borderWidth: 1,
+                                borderColor: foodData.isAvailable !== false ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'
+                            }}
+                        >
+                            <Text style={{ 
+                                fontSize: 13, 
+                                fontWeight: 'bold', 
+                                color: foodData.isAvailable !== false ? '#22C55E' : '#EF4444',
+                                letterSpacing: 0.5
+                            }}>
+                                {foodData.isAvailable !== false ? 'Currently Available' : 'Unavailable/ Out of stock'}
+                            </Text>
+                        </Animatable.View>
                     </View>
 
                     {/* Quantity Stepper */}
@@ -349,15 +387,15 @@ export default function FoodDetailsScreen(props) {
                     
                     <TouchableOpacity 
                         onPress={added ? handleRemoveFromCart : handleAddToCart}
-                        disabled={loading}
+                        disabled={loading || foodData.isAvailable === false}
                         style={{ 
-                            backgroundColor: added ? '#EF4444' : '#001F33', 
+                            backgroundColor: foodData.isAvailable === false ? '#9CA3AF' : (added ? '#EF4444' : '#001F33'), 
                             flexDirection: 'row',
                             alignItems: 'center',
                             paddingHorizontal: 30, 
                             paddingVertical: 18, 
                             borderRadius: 25,
-                            shadowColor: added ? '#EF4444' : '#001F33',
+                            shadowColor: foodData.isAvailable === false ? '#9CA3AF' : (added ? '#EF4444' : '#001F33'),
                             shadowOpacity: 0.3,
                             shadowRadius: 10,
                             elevation: 5
@@ -369,7 +407,7 @@ export default function FoodDetailsScreen(props) {
                             <>
                                 <ShoppingBagIcon size={20} color="white" />
                                 <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold', marginLeft: 8 }}>
-                                    {added ? 'Remove' : 'Add to Cart'}
+                                    {foodData.isAvailable === false ? 'Out of stock' : (added ? 'Remove' : 'Add to Cart')}
                                 </Text>
                             </>
                         )}
