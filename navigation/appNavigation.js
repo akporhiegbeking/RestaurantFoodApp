@@ -12,8 +12,10 @@ import CartScreen from '../screens/CartScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import PayStackPayment from '../screens/PayStackPayment';
 import OrderSuccess from '../screens/OrderSuccessScreen';
+import PaymentOnDelivery from '../screens/PaymentOnDelivery';
 import SavedItemsScreen from '../screens/SavedItemsScreen';
 import OrdersListScreen from '../screens/OrdersListScreen';
+import OrderDetails from '../screens/OrderDetails';
 import useAuth from '../hooks/useAuth'; 
 
 const Stack = createNativeStackNavigator();
@@ -44,9 +46,11 @@ export default function AppNavigation() {
             <Stack.Screen name="Cart" options={{headerShown: false}} component={CartScreen} />
             <Stack.Screen name="EditProfile" options={{headerShown: false}} component={EditProfileScreen} />
             <Stack.Screen name="PayStackPayment" options={{headerShown: false}} component={PayStackPayment} />
+            <Stack.Screen name="PaymentOnDelivery" options={{headerShown: false}} component={PaymentOnDelivery} />
             <Stack.Screen name="OrderSuccess" options={{headerShown: false}}  component={OrderSuccess} />
             <Stack.Screen name="SavedItems" options={{headerShown: false}} component={SavedItemsScreen} />
             <Stack.Screen name="OrdersList" options={{headerShown: false}} component={OrdersListScreen} />
+            <Stack.Screen name="OrderDetails" options={{headerShown: false}} component={OrderDetails} />
           </>
         ) : (
           <>

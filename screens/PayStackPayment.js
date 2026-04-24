@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { usePaystack } from 'react-native-paystack-webview';
 import { useNavigation } from '@react-navigation/native';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../constants/firebase';
 import Toast from 'react-native-root-toast';
 import { StatusBar as RNStatusBar } from 'react-native';
@@ -48,6 +48,16 @@ const PayStackPayment = ({ route }) => {
       const ordersCollection = collection(db, 'orders');
       await addDoc(ordersCollection, orderData);
       console.log('Order saved successfully!');
+
+      // Mark items as placed in cart instead of deleting
+      for (const item of cartItems) {
+        try {
+          await updateDoc(doc(db, 'cart', item.id), { orderStatus: 'placed' });
+        } catch (err) {
+          console.error(`Error updating item ${item.id} in cart:`, err);
+        }
+      }
+
       setLoading(false);
       setSuccessVisible(true);
     } catch (error) {

@@ -56,7 +56,7 @@ const OrderSuccessScreen = () => {
           duration={800}
           style={styles.headerTitle}
         >
-          Payment made successfully
+          Order Placed successfully
         </Animatable.Text>
 
         <Animatable.View 

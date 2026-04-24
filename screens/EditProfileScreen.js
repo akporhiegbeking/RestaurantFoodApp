@@ -1,187 +1,431 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ActivityIndicator, 
-  TouchableOpacity, 
-  Image, 
-  TextInput, 
-  ScrollView,
-  StyleSheet,
-} from 'react-native'
+import {
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, 
+  TextInput, Alert, StatusBar, Modal,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { 
-  collection, 
-  updateDoc,
-  doc, 
-  where,
-  query,
-  getDocs,
-  getDoc,
+import { useNavigation } from '@react-navigation/native';
+import {
+  collection, updateDoc, doc, where, query, getDocs,
 } from 'firebase/firestore';
 import { db, auth } from '../constants/firebase';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import Toast from 'react-native-root-toast';
-import { 
-  AntDesign, 
-} from '@expo/vector-icons';
 
-const EditProfileScreen = ({ navigation }) => {
-  const [fullName, setFullName] = useState('');
+/* ─────────────────────────────────────────────
+   Row Components
+───────────────────────────────────────────── */
+
+/** Editable row — label on left, text input on right */
+const EditRow = ({ label, value, onChangeText, placeholder, keyboardType }) => (
+  <View style={styles.row}>
+    <Text style={styles.rowLabel}>{label}</Text>
+    <TextInput
+      style={styles.rowValueInput}
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder || ''}
+      placeholderTextColor="#C0C0C0"
+      keyboardType={keyboardType || 'default'}
+    />
+  </View>
+);
+
+/** Read-only row — label on left, bold value on right */
+const InfoRow = ({ label, value }) => (
+  <View style={styles.row}>
+    <Text style={styles.rowLabel}>{label}</Text>
+    <Text style={styles.rowValue}>{value}</Text>
+  </View>
+);
+
+/** Action row — label on left, green chevron on right */
+const ActionRow = ({ label, onPress }) => (
+  <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.6}>
+    <Text style={styles.rowLabel}>{label}</Text>
+    <Text style={styles.greenChevron}>{'>'}</Text>
+  </TouchableOpacity>
+);
+
+/* ─────────────────────────────────────────────
+   Main Screen
+───────────────────────────────────────────── */
+const EditProfileScreen = () => {
+  const navigation = useNavigation();
+
+  const [fullName, setFullName]       = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [home_address, sethome_address] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [homeAddress, setHomeAddress] = useState('');
+  const [email, setEmail]             = useState('');
+  const [isFetching, setIsFetching]   = useState(true);
+  const [isSaving, setIsSaving]       = useState(false);
 
+  // Address Modal States
+  const [isAddressModalVisible, setIsAddressModalVisible] = useState(false);
+  const [tempAddress, setTempAddress] = useState('');
+
+  /* ── Fetch ── */
   useEffect(() => {
-    const fetchUserData = async () => {
+    (async () => {
       try {
-        setIsLoading(true);
-  
-        // Use where query to find the document with the matching uid
-        const userQuery = query(collection(db, 'users'), where('uid', '==', auth.currentUser.uid));
-        const querySnapshot = await getDocs(userQuery);
-  
-        if (querySnapshot.empty) {
-          // Handle the case where no matching document is found
-          setIsLoading(false);
-          console.error('User document not found.');
-          return;
+        const q = query(
+          collection(db, 'users'),
+          where('uid', '==', auth.currentUser.uid)
+        );
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const d = snap.docs[0].data();
+          setFullName(d.fullName || '');
+          setPhoneNumber(d.phoneNumber || '');
+          setHomeAddress(d.home_address || '');
+          setEmail(auth.currentUser?.email || d.email || '');
         }
-  
-        // Assuming there is only one document for each user, use docs[0]
-        const userDoc = querySnapshot.docs[0].data();
-  
-        // Set the state with the user data
-        setFullName(userDoc.fullName);
-        setPhoneNumber(userDoc.phoneNumber || '');
-        sethome_address(userDoc.home_address || '');
-  
-        setIsLoading(false);
-      } catch (error) {
-        setIsLoading(false);
-        console.error('Error fetching user data:', error);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsFetching(false);
       }
-    };
-
-    fetchUserData();
+    })();
   }, []);
-  
-  const updateProfile = async () => {
+
+  /* ── Save ── */
+  const handleSave = async () => {
     try {
-      setIsLoading(true);
-
-      // Get the document ID based on the user's UID
-      const userQuery = query(collection(db, 'users'), where('uid', '==', auth.currentUser.uid));
-      const querySnapshot = await getDocs(userQuery);
-
-      if (!querySnapshot.empty) {
-        const userDoc = querySnapshot.docs[0];
-        const userDocId = userDoc.id;
-
-        // Update the document with the new values
-        await updateDoc(doc(db, 'users', userDocId), {
-          fullName: fullName,
-          phoneNumber: phoneNumber,
-          home_address: home_address,
+      setIsSaving(true);
+      const q = query(
+        collection(db, 'users'),
+        where('uid', '==', auth.currentUser.uid)
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const docId = snap.docs[0].id;
+        await updateDoc(doc(db, 'users', docId), {
+          fullName,
+          phoneNumber,
+          home_address: homeAddress,
         });
-
-        console.log('Profile updated');
         Toast.show('Profile updated', { duration: Toast.durations.SHORT });
-        setIsLoading(false);
-        navigation.navigate('Home');
-
-      } else {
-        console.error('User document not found.');
-        Toast.show('User document not found', { duration: Toast.durations.SHORT });
-        setIsLoading(false);
+        navigation.goBack();
       }
-    } catch (error) {
-      setIsLoading(false);
-      console.error('Error updating profile:', error);
+    } catch (e) {
+      console.error(e);
       Toast.show('Failed to update profile', { duration: Toast.durations.SHORT });
+    } finally {
+      setIsSaving(false);
     }
   };
-  
-  return (
-    <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-      <View className="flex-1 bg-white" style={{backgroundColor: 'black'}}>
-        <SafeAreaView className="flex">
-          <View className="flex-row justify-start">
-            <TouchableOpacity 
-              onPress={()=> navigation.goBack()}                 
-            >
-              <AntDesign name="back" size={40} stroke={50} color="white" />          
-            </TouchableOpacity>
-          </View>
 
-          <View className="flex-row justify-center">                        
-            <Image
-              source={require('../assets/images/avatar.png')}
-              style={{width: 100, height: 100, borderRadius: 70, }}
-            />
-          </View>
-        </SafeAreaView>
+  /* ── Update Password ── */
+  const handleUpdatePassword = () => {
+    Alert.alert(
+      'Update Password',
+      'A password-reset link will be sent to your registered email address.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Send Link', 
+          onPress: async () => {
+            try {
+              await sendPasswordResetEmail(auth, email);
+              Toast.show('Password reset email sent!', { duration: Toast.durations.LONG });
+            } catch (error) {
+              console.error(error);
+              Alert.alert('Error', error.message);
+            }
+          } 
+        },
+      ]
+    );
+  };
 
-        <View 
-          className="flex-1 bg-white px-8 pt-8"
-          style={{borderTopLeftRadius: 50, marginTop: 10, borderTopRightRadius: 50}}
-        >
-          <View className="form space-y-2" >
-                              
-            <TextInput
-              className="p-4 bg-gray-100 text-gray-700 rounded-2xl mb-3"
-              placeholder='Enter Your Fullname'
-              value={fullName}
-              onChangeText={value => setFullName(value)}
-            />
-      
-            <TextInput
-              className="p-4 bg-gray-100 text-gray-700 rounded-2xl mb-3"
-              value={phoneNumber}
-              onChangeText={value=> setPhoneNumber(value)}
-              placeholder='Enter Your Phone Number'
-            />
-
-            <TextInput
-              className="p-4 bg-gray-100 text-gray-700 rounded-2xl mb-3"
-              value={home_address}
-              onChangeText={value=> sethome_address(value)}
-              placeholder='Enter Your Delivery Home address'
-            />
-
-            <TouchableOpacity
-              className="py-3 rounded-xl"
-              style={{ backgroundColor: '#0B0BFF' }}
-              onPress={updateProfile}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="yellow" />
-              ) : (
-                <Text 
-                  style={{ 
-                    textAlign: 'center',
-                    color: 'yellow', 
-                    fontSize: 15, 
-                    fontWeight: 'bold'
-                  }}
-                > 
-                  Update
-                </Text>
-              )}
-            </TouchableOpacity>
-
-          </View>
-        </View>
+  if (isFetching) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color="#000" />
       </View>
-    </ScrollView>
-  );
-}
+    );
+  }
 
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
+      {/* ── Header ── */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Text style={styles.backArrow}>{'←'}</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Account Details</Text>
+        {/* Save button top-right */}
+        <TouchableOpacity onPress={handleSave} style={styles.saveBtn} disabled={isSaving}>
+          {isSaving
+            ? <ActivityIndicator size="small" color="#001F33" />
+            : <Text style={styles.saveBtnText}>Save</Text>}
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ════════ PROFILE ════════ */}
+        <Text style={styles.sectionHeader}>Profile</Text>
+        <View style={styles.card}>
+          <EditRow
+            label="Phone Number"
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+            placeholder="+234..."
+            keyboardType="phone-pad"
+          />
+          <View style={styles.separator} />
+          <EditRow
+            label="Name"
+            value={fullName}
+            onChangeText={setFullName}
+            placeholder="Full name"
+          />
+          <View style={styles.separator} />
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Email Address</Text>
+            <View style={styles.rowRightGroup}>
+              <Text style={styles.rowValue} numberOfLines={1}>{email}</Text>
+            </View>
+          </View>
+          <View style={styles.separator} />
+          <ActionRow label="Update Password" onPress={handleUpdatePassword} />
+        </View>
+
+        {/* ════════ ADDRESS ════════ */}
+        <Text style={styles.sectionHeader}>Address</Text>
+        <View style={styles.card}>
+          <TouchableOpacity 
+            style={styles.row} 
+            onPress={() => {
+              setTempAddress(homeAddress);
+              setIsAddressModalVisible(true);
+            }}
+          >
+            <Text style={styles.rowLabel}>Home Address</Text>
+            <Text style={styles.rowValue} numberOfLines={2}>
+              {homeAddress || 'Enter delivery address'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ════════ ADDRESS MODAL ════════ */}
+        <Modal
+          visible={isAddressModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setIsAddressModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Update Address</Text>
+                <TouchableOpacity onPress={() => setIsAddressModalVisible(false)}>
+                  <Text style={styles.closeModalText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TextInput
+                style={styles.modalInput}
+                value={tempAddress}
+                onChangeText={setTempAddress}
+                placeholder="Type your full address here..."
+                multiline={true}
+                numberOfLines={4}
+                autoFocus={true}
+              />
+
+              <TouchableOpacity 
+                style={styles.modalUpdateButton}
+                onPress={() => {
+                  setHomeAddress(tempAddress);
+                  setIsAddressModalVisible(false);
+                }}
+              >
+                <Text style={styles.modalUpdateButtonText}>Confirm Address</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+/* ─────────────────────────────────────────────
+   Styles
+───────────────────────────────────────────── */
 const styles = StyleSheet.create({
-  goBack: {
-    marginLeft: 10,
-    marginBottom: 10,
-    bordercolor: 'grey',
-    borderWidth: 1.5,
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+
+  /* Header */
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#E5E7EB',
+  },
+  backBtn: {
+    width: 36,
+  },
+  backArrow: {
+    fontSize: 22,
+    color: '#1A1A1A',
+    fontWeight: '400',
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  saveBtn: {
+    width: 44,
+    alignItems: 'flex-end',
+  },
+  saveBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#001F33',
+  },
+  /* Scroll */
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 50,
+  },
+
+  /* Section header */
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    paddingHorizontal: 20,
+    paddingTop: 28,
+    paddingBottom: 10,
+  },
+
+  /* Card */
+  card: {
+    backgroundColor: '#fff',
+    borderTopWidth: 0.5,
+    borderBottomWidth: 0.5,
+    borderColor: '#E5E7EB',
+  },
+
+  /* Row */
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    minHeight: 54,
+  },
+  rowLabel: {
+    fontSize: 15,
+    fontWeight: '400',
+    color: '#6B7280',
+    flex: 0,
+    minWidth: 120,
+  },
+  rowValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    textAlign: 'right',
+    flexShrink: 1,
+  },
+  rowRightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  rowValueInput: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    padding: 0,
+  },
+  greenChevron: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '',
+    marginLeft: 4,
+  },
+
+  /* Modal Styles */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  closeModalText: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  modalInput: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 15,
+    fontSize: 16,
+    color: '#1A1A1A',
+    minHeight: 120,
+    textAlignVertical: 'top',
+    marginBottom: 20,
+  },
+  modalUpdateButton: {
+    backgroundColor: '#001F33',
+    paddingVertical: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalUpdateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
 

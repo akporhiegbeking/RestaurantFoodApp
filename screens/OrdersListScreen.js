@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../constants/firebase';
@@ -21,9 +21,17 @@ const OrdersListScreen = () => {
 
       querySnapshot.forEach((doc) => {
         const orderData = doc.data();
-        const foodItems = orderData.foodItems;
+        const foodItems = orderData.foodItems || [];
         foodItems.forEach((foodItem, index) => {
-          fetchedOrders.push({ ...foodItem, orderId: doc.id, index, ...orderData.paymentReference });
+          fetchedOrders.push({ 
+            ...foodItem, 
+            orderId: doc.id, 
+            index, 
+            orderStatus: orderData.status || 'pending',
+            totalPrice: orderData.totalPrice,
+            paymentStatus: orderData.paymentStatus,
+            createdAt: orderData.createdAt,
+          });
         });
       });
 
@@ -40,17 +48,30 @@ const OrdersListScreen = () => {
   }, []);
 
   const renderItem = ({ item }) => (
-    <View style={styles.orderItem}>
+    <TouchableOpacity 
+      style={styles.orderItem}
+      onPress={() => navigation.navigate('OrderDetails', { order: item })}
+    >
       <Image source={{ uri: item.imageUrl || 'https://via.placeholder.com/150' }} style={styles.image} />
+      
       <View style={styles.orderInfo}>
-        <Text style={styles.orderName}>{item.name}</Text>
-        <Text style={styles.orderId}>Order #{item.orderId}</Text>
-        {/* <Text style={styles.orderDate}>On {item.timestamp ? new Date(item.timestamp.seconds * 1000).toLocaleDateString() : 'N/A'}</Text> */}
-        <View style={styles.statusContainer}>
-          <Text style={styles.orderStatus}>{item.paymentStatus || 'CONFIRMED'}</Text>
+        <View style={styles.orderHeaderRow}>
+          <Text style={styles.orderName}>{item.name}</Text>
+          <Text style={styles.orderPrice}>₦{item.price}</Text>
+        </View>
+        
+        <View style={styles.orderSubRow}>
+          <Text style={styles.orderId}>Order #{item.orderId.substring(0, 8)}...</Text>
+          <Text style={styles.orderQuantity}>Qty: {item.quantity}</Text>
+        </View>
+
+        <View style={styles.actionRow}>
+          <View style={[styles.statusContainer, { backgroundColor: item.orderStatus === 'completed' ? '#4caf50' : '#ff9800' }]}>
+            <Text style={styles.orderStatus}>{item.orderStatus.toUpperCase()}</Text>
+          </View>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   if (loading) {
@@ -137,24 +158,47 @@ const styles = StyleSheet.create({
   orderName: {
     fontSize: 16,
     fontWeight: 'bold',
+    color: '#333',
+    flex: 1,
+  },
+  orderPrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000',
   },
   orderId: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#888',
   },
-  orderDate: {
+  orderQuantity: {
     fontSize: 14,
-    color: '#888',
+    color: '#666',
   },
-  statusContainer: {
-    backgroundColor: '#4caf50',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 5,
+  orderHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  orderSubRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
     marginTop: 5,
   },
+  statusContainer: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 5,
+  },
   orderStatus: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#fff',
     fontWeight: 'bold',
   },

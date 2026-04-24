@@ -2,6 +2,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
   Image, ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { auth, db } from '../constants/firebase';
 import { useNavigation } from '@react-navigation/native';
 import React, { useState, useEffect } from 'react';
@@ -17,6 +18,7 @@ const CartScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState({}); 
+  const [paymentMethod, setPaymentMethod] = useState('Pay now'); 
 
   const getUserData = async () => {
     const userQuery = query(
@@ -52,7 +54,9 @@ const CartScreen = () => {
       if (user) {
         const cartQuery = query(collection(db, 'cart'), where('uid', '==', user.uid));
         const querySnapshot = await getDocs(cartQuery);
-        const items = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        const items = querySnapshot.docs
+          .map(doc => ({ ...doc.data(), id: doc.id }))
+          .filter(item => item.orderStatus !== 'placed'); // Filter out already placed items
         setCartItems(items);
         calculateTotal(items);
       } else {
@@ -74,11 +78,19 @@ const CartScreen = () => {
   }, [auth.currentUser]);
 
   const handleBuyNow = () => {
-    navigation.navigate('PayStackPayment', {
-      totalPrice,
-      cartItems,
-      userData,
-    });
+    if (paymentMethod === 'Pay now') {
+      navigation.navigate('PayStackPayment', {
+        totalPrice,
+        cartItems,
+        userData,
+      });
+    } else {
+      navigation.navigate('PaymentOnDelivery', {
+        totalPrice,
+        cartItems,
+        userData,
+      });
+    }
   };
 
   const calculateTotal = (items) => {
@@ -150,7 +162,8 @@ const CartScreen = () => {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.container}>
 
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
@@ -188,8 +201,12 @@ const CartScreen = () => {
           <View style={styles.deliveryDetails}>
             <Text style={styles.deliveryTitle}>Delivery details</Text>
             <View style={styles.deliveryItem}>
-              <Text style={styles.deliveryLabel}>Location</Text>
-              <Text style={styles.deliveryValue}>{userData.home_address || ''}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={styles.deliveryLabel}>Location</Text>
+                <Text style={[styles.deliveryValue, { marginLeft: 10 }]}>
+                  {userData.home_address?.length > 25 ? userData.home_address.substring(0, 25) + '...' : userData.home_address || ''}
+                </Text>
+              </View>
 
               <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={styles.editButton}>
                 <Text style={styles.editButtonText}>Edit</Text>
@@ -205,24 +222,50 @@ const CartScreen = () => {
               <Text style={styles.deliveryLabel}>Estimated delivery time</Text>
               <Text style={styles.deliveryValue}>20 - 50 mins</Text>             
             </View>
+
+            <View style={styles.paymentSection}>
+              <Text style={styles.deliveryTitle}>Payment method</Text>
+              <TouchableOpacity 
+                style={styles.paymentOption} 
+                onPress={() => setPaymentMethod('Pay now')}
+              >
+                <View style={[styles.radioButton, paymentMethod === 'Pay now' && styles.radioButtonSelected]}>
+                  {paymentMethod === 'Pay now' && <View style={styles.radioInner} />}
+                </View>
+                <Text style={styles.paymentOptionText}>Pay now</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.paymentOption} 
+                onPress={() => setPaymentMethod('Pay on Delivery')}
+              >
+                <View style={[styles.radioButton, paymentMethod === 'Pay on Delivery' && styles.radioButtonSelected]}>
+                  {paymentMethod === 'Pay on Delivery' && <View style={styles.radioInner} />}
+                </View>
+                <Text style={styles.paymentOptionText}>Pay on Delivery</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <TouchableOpacity onPress={handleBuyNow} style={styles.checkoutButton}>
             <Text style={styles.checkoutButtonText}>Checkout (₦ {totalPrice.toFixed(2)})</Text>
           </TouchableOpacity>
-
         </>
       )}
-    </View>
+      </View>
+    </SafeAreaView>
 
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    marginTop: 50,
   },
   summaryContainer: {
     flexDirection: 'row',
@@ -313,6 +356,9 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 50,
+    marginHorizontal: 15,
+    borderRadius: 10,
   },
   checkoutButtonText: {
     color: '#fff',
@@ -396,6 +442,40 @@ const styles = StyleSheet.create({
   editButtonText: {
     color: 'blue',
     fontSize: 16,
+  },
+  paymentSection: {
+    marginTop: 15,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f1f1',
+  },
+  paymentOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  paymentOptionText: {
+    fontSize: 16,
+    marginLeft: 10,
+    color: '#333',
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#ff6347',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioButtonSelected: {
+    borderColor: '#ff6347',
+  },
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#ff6347',
   },
 
 });

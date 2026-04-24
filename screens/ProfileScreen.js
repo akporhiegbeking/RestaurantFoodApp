@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  ActivityIndicator, Image, StatusBar, ImageBackground
+  ActivityIndicator, Image, StatusBar, ImageBackground, Linking, Alert
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { signOut } from 'firebase/auth';
@@ -77,6 +77,26 @@ const ProfileScreen = () => {
     fetchTotalTransactions();
   }, [auth.currentUser]);
 
+  const handleHelpCenter = () => {
+    const supportEmail = 'plutoidtechnologieslimited@gmail.com';
+    const subject = encodeURIComponent('Help Center - I need help');
+    const userEmail = auth.currentUser?.email || userData.email || '';
+    const body = encodeURIComponent(`From: ${userEmail}\n\nDescribe your issue below:\n`);
+    const mailtoUrl = `mailto:${supportEmail}?subject=${subject}&body=${body}`;
+
+    Linking.canOpenURL(mailtoUrl)
+      .then((supported) => {
+        if (supported) {
+          return Linking.openURL(mailtoUrl);
+        } else {
+          Alert.alert('No Mail App Found', 'Please send an email to plutoidtechnologieslimited@gmail.com');
+        }
+      })
+      .catch(() => {
+        Alert.alert('Error', 'Unable to open mail app. Please try again.');
+      });
+  };
+
   const handleLogout = async () => {
     await signOut(auth);
     await AsyncStorage.clear();
@@ -123,15 +143,12 @@ const ProfileScreen = () => {
                 <View style={styles.statusDot} />
               </View>
               <View style={styles.nameContainer}>
-                <Text style={styles.greetingText}>Hi, {userData.fullName?.split(' ')[0] || 'Guest'}</Text>
-                <View style={styles.tierBadge}>
-                  <Text style={styles.tierText}>🏆 Tier 1</Text>
-                </View>
+                <Text style={styles.greetingText}>Hi, {userData.fullName?.split(' ')[0] || 'Guest'}</Text>               
               </View>
             </View>
           </View>
           <TouchableOpacity
-            onPress={() => navigation.navigate('EditProfile')}
+            onPress={() => navigation.navigate('EditProfile', { userData })}
             style={styles.settingsButton}
           >
             <Cog6ToothIcon size={28} color="#1A1A1A" />            
@@ -160,7 +177,7 @@ const ProfileScreen = () => {
             <MenuItem
               label="Edit My Profile"
               icon={<UserIcon size={22} color="#F59E0B" />}
-              onPress={() => navigation.navigate('EditProfile')}
+              onPress={() => navigation.navigate('EditProfile', { userData })}
             />
             <MenuItem
               label="My Orders"
@@ -184,7 +201,7 @@ const ProfileScreen = () => {
             <MenuItem
               label="Help Center"
               icon={<ShieldCheckIcon size={22} color="#F59E0B" />}
-              onPress={() => { }}
+              onPress={handleHelpCenter}
             />
             <MenuItem
               label="Logout"
@@ -287,21 +304,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     color: '#1A1A1A',
-  },
-  tierBadge: {
-    backgroundColor: '#FFFBEB',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    marginTop: 4,
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#FEF3C7',
-  },
-  tierText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#F59E0B',
   },
   settingsButton: {
     padding: 8,
