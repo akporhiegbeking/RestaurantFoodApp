@@ -89,8 +89,8 @@ const OrdersListScreen = () => {
 
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <ChevronLeftIcon size="23" color="white" />
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+            <ChevronLeftIcon size="23" stroke={50} color="white" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}> Orders Placed</Text>
         </View>
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     padding: 15,
     backgroundColor: 'black',
   },
-  backButton: {
+  headerButton: {
     marginRight: 10,
   },
   headerTitle: {

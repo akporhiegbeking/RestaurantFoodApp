@@ -124,122 +124,122 @@ export default function HomeScreen() {
       />
 
       <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView
+        <FlatList
+          data={foodItems.filter(item => activeCategory === 'All' || item.category === activeCategory)}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 15 }}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        >
-          {/* Header */}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginHorizontal: 20, marginTop: 10 }}>
-            {/* Profile Section (Left) */}
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Profile')}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
-            >
-              <View style={{
-                padding: 2,
-                backgroundColor: 'white',
-                borderRadius: 25,
-                shadowColor: '#000',
-                shadowOpacity: 0.1,
-                shadowRadius: 5,
-                elevation: 3
-              }}>
-                <Image
-                  source={userData?.imageUrl ? { uri: userData.imageUrl } : require('../assets/images/avatar.png')}
-                  style={{ height: 48, width: 48, borderRadius: 24 }}
-                />
-              </View>
-              <View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Text style={{ fontSize: 14, color: 'rgba(0,0,0,0.6)', fontWeight: '500' }}>Welcome back,</Text>
-                  <ChevronRightIcon size={20} color="rgba(0,0,0,0.4)" style={{ fontWeight: 'bold' }} />
-                </View>
-                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1A1A1A' }}>
-                  {userData?.fullName?.split(' ')[0] || 'Guest'}
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Icons Area (Right) */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
-              {/* Orders List Icon */}
-              <TouchableOpacity
-                onPress={() => navigation.navigate('OrdersList')}
-                style={{ padding: 5 }}
-              >
-                <DocumentTextIcon size={32} color="white" />
-              </TouchableOpacity>
-
-              {/* Cart Icon with Badge */}
-              <TouchableOpacity
-                onPress={() => navigation.navigate('Cart')}
-                style={{ padding: 5 }}
-              >
-                <ShoppingBagIcon size={32} color="white" />
-                {cartCount > 0 && (
-                  <View style={{ position: 'absolute', right: -2, top: -2, backgroundColor: '#EF4444', borderRadius: 10, width: 22, height: 22, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'white' }}>
-                    <Text style={{ color: 'white', fontSize: 10, fontWeight: '800' }}>{cartCount}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Title */}
-          <View style={{ marginHorizontal: 20, marginTop: 30 }}>
-            <Text style={{ fontSize: 42, fontWeight: 'bold', color: '#1A1A1A', lineHeight: 50 }}>Fast and</Text>
-            <Text style={{ fontSize: 42, fontWeight: 'bold', color: '#1A1A1A', lineHeight: 50 }}>Delicious Food</Text>
-          </View>
-
-          {/* Search Bar */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, marginTop: 30 }}>
-            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 20, paddingHorizontal: 15, height: 60, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 }}>
-              <MagnifyingGlassIcon size={24} color="#999" />
-              <TextInput
-                placeholder="Search"
-                style={{ flex: 1, marginLeft: 10, fontSize: 18, color: '#333' }}
-              />
-            </View>
-          </View>
-
-          {/* Categories */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20, marginTop: 30 }}
-          >
-            {categories.map((cat, index) => {
-              const isActive = activeCategory === cat;
-              return (
+          ListHeaderComponent={
+            <>
+              {/* Header */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginHorizontal: 20, marginTop: 10 }}>
+                {/* Profile Section (Left) */}
                 <TouchableOpacity
-                  key={index}
-                  onPress={() => setActiveCategory(cat)}
-                  style={{ marginRight: 30, alignItems: 'center' }}
+                  onPress={() => navigation.navigate('Profile')}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
                 >
-                  <Text style={{ fontSize: 18, fontWeight: isActive ? 'bold' : '500', color: isActive ? 'white' : '#666' }}>
-                    {cat}
-                  </Text>
-                  {isActive && <View style={{ width: 20, height: 3, backgroundColor: 'white', marginTop: 5, borderRadius: 2 }} />}
+                  <View style={{
+                    padding: 2,
+                    backgroundColor: 'white',
+                    borderRadius: 25,
+                    shadowColor: '#000',
+                    shadowOpacity: 0.1,
+                    shadowRadius: 5,
+                    elevation: 3
+                  }}>
+                    <Image
+                      source={userData?.imageUrl ? { uri: userData.imageUrl } : require('../assets/images/avatar.png')}
+                      style={{ height: 48, width: 48, borderRadius: 24 }}
+                    />
+                  </View>
+                  <View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Text style={{ fontSize: 14, color: 'rgba(0,0,0,0.6)', fontWeight: '500' }}>Welcome back,</Text>
+                      <ChevronRightIcon size={20} color="rgba(0,0,0,0.4)" style={{ fontWeight: 'bold' }} />
+                    </View>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1A1A1A' }}>
+                      {userData?.fullName?.split(' ')[0] || 'Guest'}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
 
-          {/* Food Items */}
-          <View style={{ paddingHorizontal: 15, marginTop: 20, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-            {loading ? (
-              <View style={{ width: '100%', height: 200, justifyContent: 'center' }}>
-                <ActivityIndicator size="large" color="orange" />
+                {/* Icons Area (Right) */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('OrdersList')}
+                    style={{ padding: 5 }}
+                  >
+                    <DocumentTextIcon size={32} color="white" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('Cart')}
+                    style={{ padding: 5 }}
+                  >
+                    <ShoppingBagIcon size={32} color="white" />
+                    {cartCount > 0 && (
+                      <View style={{ position: 'absolute', right: -2, top: -2, backgroundColor: '#EF4444', borderRadius: 10, width: 22, height: 22, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'white' }}>
+                        <Text style={{ color: 'white', fontSize: 10, fontWeight: '800' }}>{cartCount}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
-            ) : (
-              foodItems
-                .filter(item => activeCategory === 'All' || item.category === activeCategory)
-                .map((item, index) => (
-                  <FoodCard item={item} index={index} key={index} />
-                ))
-            )}
-          </View>
-        </ScrollView>
+
+              {/* Title */}
+              <View style={{ marginHorizontal: 20, marginTop: 30 }}>
+                <Text style={{ fontSize: 42, fontWeight: 'bold', color: '#1A1A1A', lineHeight: 50 }}>Fast and</Text>
+                <Text style={{ fontSize: 42, fontWeight: 'bold', color: '#1A1A1A', lineHeight: 50 }}>Delicious Food</Text>
+              </View>
+
+              {/* Search Bar */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, marginTop: 30 }}>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 20, paddingHorizontal: 15, height: 60, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 }}>
+                  <MagnifyingGlassIcon size={24} color="#999" />
+                  <TextInput
+                    placeholder="Search"
+                    style={{ flex: 1, marginLeft: 10, fontSize: 18, color: '#333' }}
+                  />
+                </View>
+              </View>
+
+              {/* Categories */}
+              <FlatList
+                horizontal
+                data={categories}
+                keyExtractor={(item, index) => index.toString()}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 20, marginTop: 30, paddingBottom: 10 }}
+                renderItem={({ item: cat, index }) => {
+                  const isActive = activeCategory === cat;
+                  return (
+                    <TouchableOpacity
+                      onPress={() => setActiveCategory(cat)}
+                      style={{ marginRight: 30, alignItems: 'center' }}
+                    >
+                      <Text style={{ fontSize: 18, fontWeight: isActive ? 'bold' : '500', color: isActive ? 'white' : '#666' }}>
+                        {cat}
+                      </Text>
+                      {isActive && <View style={{ width: 20, height: 3, backgroundColor: 'white', marginTop: 5, borderRadius: 2 }} />}
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+
+              {loading && (
+                <View style={{ width: '100%', height: 200, justifyContent: 'center' }}>
+                  <ActivityIndicator size="large" color="orange" />
+                </View>
+              )}
+            </>
+          }
+          renderItem={({ item, index }) => (
+            <FoodCard item={item} index={index} key={index} />
+          )}
+          ListFooterComponent={<View style={{ height: 20 }} />}
+        />
       </SafeAreaView>
     </View>
   );

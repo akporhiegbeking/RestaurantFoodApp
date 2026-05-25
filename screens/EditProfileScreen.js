@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, 
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator,
   TextInput, Alert, StatusBar, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import {
 import { db, auth } from '../constants/firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import Toast from 'react-native-root-toast';
+import { ChevronLeftIcon } from 'react-native-heroicons/solid';
 
 /* ─────────────────────────────────────────────
    Row Components
@@ -53,12 +54,12 @@ const ActionRow = ({ label, onPress }) => (
 const EditProfileScreen = () => {
   const navigation = useNavigation();
 
-  const [fullName, setFullName]       = useState('');
+  const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [homeAddress, setHomeAddress] = useState('');
-  const [email, setEmail]             = useState('');
-  const [isFetching, setIsFetching]   = useState(true);
-  const [isSaving, setIsSaving]       = useState(false);
+  const [email, setEmail] = useState('');
+  const [isFetching, setIsFetching] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Address Modal States
   const [isAddressModalVisible, setIsAddressModalVisible] = useState(false);
@@ -122,8 +123,8 @@ const EditProfileScreen = () => {
       'A password-reset link will be sent to your registered email address.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Send Link', 
+        {
+          text: 'Send Link',
           onPress: async () => {
             try {
               await sendPasswordResetEmail(auth, email);
@@ -132,7 +133,7 @@ const EditProfileScreen = () => {
               console.error(error);
               Alert.alert('Error', error.message);
             }
-          } 
+          }
         },
       ]
     );
@@ -152,8 +153,8 @@ const EditProfileScreen = () => {
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backArrow}>{'←'}</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+          <ChevronLeftIcon size="23" stroke={50} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Account Details</Text>
         {/* Save button top-right */}
@@ -201,8 +202,8 @@ const EditProfileScreen = () => {
         {/* ════════ ADDRESS ════════ */}
         <Text style={styles.sectionHeader}>Address</Text>
         <View style={styles.card}>
-          <TouchableOpacity 
-            style={styles.row} 
+          <TouchableOpacity
+            style={styles.row}
             onPress={() => {
               setTempAddress(homeAddress);
               setIsAddressModalVisible(true);
@@ -241,7 +242,7 @@ const EditProfileScreen = () => {
                 autoFocus={true}
               />
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.modalUpdateButton}
                 onPress={() => {
                   setHomeAddress(tempAddress);
@@ -285,13 +286,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: '#E5E7EB',
   },
-  backBtn: {
-    width: 36,
-  },
-  backArrow: {
-    fontSize: 22,
-    color: '#1A1A1A',
-    fontWeight: '400',
+  headerButton: {
+    backgroundColor: '#001F33',
+    padding: 8,
+    borderRadius: 12,
   },
   headerTitle: {
     fontSize: 17,

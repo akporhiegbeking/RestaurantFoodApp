@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { 
-  View, Text, ActivityIndicator, TouchableOpacity, 
-  StyleSheet, ScrollView, Modal 
+import {
+  View, Text, ActivityIndicator, TouchableOpacity,
+  StyleSheet, ScrollView, Modal
 } from 'react-native';
 import { usePaystack } from 'react-native-paystack-webview';
 import { useNavigation } from '@react-navigation/native';
@@ -9,7 +9,7 @@ import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/fi
 import { db } from '../constants/firebase';
 import Toast from 'react-native-root-toast';
 import { StatusBar as RNStatusBar } from 'react-native';
-import { ChevronLeftIcon } from 'react-native-heroicons/outline';
+import { ChevronLeftIcon } from 'react-native-heroicons/solid';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PayStackPayment = ({ route }) => {
@@ -17,7 +17,7 @@ const PayStackPayment = ({ route }) => {
   const { totalPrice, cartItems, userData } = route.params;
   const [loading, setLoading] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
-  
+
   const { popup } = usePaystack();
 
   const amountNGN = totalPrice.toFixed(2);
@@ -26,7 +26,7 @@ const PayStackPayment = ({ route }) => {
   const handlePaymentSuccess = async (response) => {
     console.log('Payment success response:', response);
     const reference = response?.reference ?? response?.transactionRef?.reference ?? response?.transactionRef ?? "";
-    
+
     setLoading(true);
     try {
       const orderData = {
@@ -105,17 +105,17 @@ const PayStackPayment = ({ route }) => {
   return (
     <SafeAreaView style={styles.container}>
       <RNStatusBar backgroundColor="#06191D" barStyle="light-content" />
-      
+
       {/* Header with Back Button */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()} 
-          style={styles.backButton}
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.headerButton}
         >
-          <ChevronLeftIcon size={24} color="#1e293b" />
+          <ChevronLeftIcon size="23" stroke={50} color="black" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Checkout</Text>
-        <View style={{ width: 40 }} /> 
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 10,
   },
-  backButton: {
+  headerButton: {
     backgroundColor: '#fff',
     padding: 10,
     borderRadius: 15,

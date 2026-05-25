@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { 
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Image 
+import {
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Image
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../constants/firebase';
-import { ChevronLeftIcon } from 'react-native-heroicons/outline';
+import { ChevronLeftIcon } from 'react-native-heroicons/solid';
 import Toast from 'react-native-root-toast';
 import { StatusBar as RNStatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,7 +31,7 @@ const PaymentOnDelivery = () => {
 
       const ordersCollection = collection(db, 'orders');
       await addDoc(ordersCollection, orderData);
-      
+
       // Mark items as placed in cart instead of deleting
       for (const item of cartItems) {
         try {
@@ -57,17 +57,17 @@ const PaymentOnDelivery = () => {
   return (
     <SafeAreaView style={styles.container}>
       <RNStatusBar backgroundColor="#f8fafc" barStyle="dark-content" />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()} 
-          style={styles.backButton}
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.headerButton}
         >
-          <ChevronLeftIcon size={24} color="#1e293b" />
+          <ChevronLeftIcon size="23" stroke={50} color="black" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Order Confirmation</Text>
-        <View style={{ width: 44 }} /> 
+        <View style={{ width: 44 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -77,7 +77,7 @@ const PaymentOnDelivery = () => {
           <Text style={styles.infoDescription}>
             Your order will be processed immediately. You can pay our rider upon arrival using:
           </Text>
-          <View style={styles.paymentMethodsGrid}>           
+          <View style={styles.paymentMethodsGrid}>
             <View style={styles.paymentMethodItem}>
               <Text style={styles.paymentMethodLabel}>💳 POS Machine</Text>
             </View>
@@ -129,8 +129,8 @@ const PaymentOnDelivery = () => {
 
       {/* Footer Button */}
       <View style={styles.footer}>
-        <TouchableOpacity 
-          style={styles.confirmButton} 
+        <TouchableOpacity
+          style={styles.confirmButton}
           onPress={handleConfirmOrder}
           disabled={loading}
         >
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  backButton: {
+  headerButton: {
     backgroundColor: '#fff',
     padding: 10,
     borderRadius: 12,

@@ -4,9 +4,10 @@ import {
     ScrollView,
 } from 'react-native';
 import {
-    ChevronLeftIcon, MinusIcon, PlusIcon, FireIcon, ClockIcon, StarIcon,
+    MinusIcon, PlusIcon, FireIcon, ClockIcon, StarIcon,
     RectangleStackIcon, ShoppingBagIcon
 } from 'react-native-heroicons/outline';
+import { ChevronLeftIcon } from 'react-native-heroicons/solid';
 import { Ionicons } from '@expo/vector-icons';
 const HeartIconSolid = (props) => <Ionicons name="heart" {...props} />;
 const HeartIconOutline = (props) => <Ionicons name="heart-outline" {...props} />;
@@ -237,11 +238,8 @@ export default function FoodDetailsScreen(props) {
             <SafeAreaView style={{ flex: 1 }}>
                 {/* Header Controls */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: 20, alignItems: 'center', marginTop: 10 }}>
-                    <TouchableOpacity
-                        onPress={() => navigation.goBack()}
-                        style={{ backgroundColor: 'white', padding: 12, borderRadius: 20, shadowColor: '#000', shadowOpacity: 0.1, elevation: 5 }}
-                    >
-                        <ChevronLeftIcon size={24} color="black" />
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+                        <ChevronLeftIcon size="23" stroke={50} color="white" />
                     </TouchableOpacity>
 
                     <TouchableOpacity

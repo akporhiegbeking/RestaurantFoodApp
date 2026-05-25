@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { 
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions 
+import {
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,11 +29,11 @@ const OrderDetails = () => {
   return (
     <SafeAreaView style={styles.container}>
       <RNStatusBar backgroundColor={showTracking ? "#15803D" : "#fff"} barStyle={showTracking ? "light-content" : "dark-content"} />
-      
+
       {/* Header */}
       <View style={[styles.header, showTracking && styles.trackingHeader]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ChevronLeftIcon size={24} color={showTracking ? "white" : "black"} />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+          <ChevronLeftIcon size="23" stroke={50} color={showTracking ? "white" : "black"} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, showTracking && styles.trackingHeaderTitle]}>
           {showTracking ? "Track Order" : "Order Details"}
@@ -80,8 +80,8 @@ const OrderDetails = () => {
             )}
 
             {!isDelivered && (
-              <TouchableOpacity 
-                style={styles.trackButton} 
+              <TouchableOpacity
+                style={styles.trackButton}
                 onPress={() => setShowTracking(true)}
               >
                 <Text style={styles.trackButtonText}>Track Order</Text>
@@ -99,7 +99,7 @@ const OrderDetails = () => {
             {/* Tracking Card */}
             <View style={styles.trackingCard}>
               <View style={styles.handle} />
-              
+
               <Text style={styles.estTimeLabel}>Estimated time of delivery</Text>
               <Text style={styles.estTimeValue}>10:00–10:30</Text>
 
@@ -131,8 +131,8 @@ const OrderDetails = () => {
                 <View style={styles.stepRow}>
                   <View style={styles.stepIndicator}>
                     <View style={[styles.dot, isPreparing && styles.dotActive]}>
-                       {isShipped && <Ionicons name="checkmark" size={12} color="white" />}
-                       {!isShipped && isPreparing && <View style={styles.innerDot} />}
+                      {isShipped && <Ionicons name="checkmark" size={12} color="white" />}
+                      {!isShipped && isPreparing && <View style={styles.innerDot} />}
                     </View>
                     <View style={[styles.line, isShipped && styles.lineActive]} />
                   </View>
@@ -151,8 +151,8 @@ const OrderDetails = () => {
                 </View>
               </View>
 
-              <TouchableOpacity 
-                style={styles.closeTracking} 
+              <TouchableOpacity
+                style={styles.closeTracking}
                 onPress={() => setShowTracking(false)}
               >
                 <Text style={styles.closeTrackingText}>Hide Tracking</Text>
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   trackingHeader: {
     backgroundColor: '#15803D',
   },
-  backButton: {
+  headerButton: {
     padding: 5,
   },
   headerTitle: {

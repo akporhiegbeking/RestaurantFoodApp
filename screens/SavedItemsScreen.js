@@ -75,7 +75,7 @@ const SavedItemsScreen = () => {
 
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <ChevronLeftIcon size="23" color="white" />
+            <ChevronLeftIcon size="23" stroke={50} color="white" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Saved Items</Text>
           <View style={styles.headerSpacer} />

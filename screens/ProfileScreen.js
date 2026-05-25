@@ -11,11 +11,11 @@ import {
   ChevronRightIcon, HeartIcon, ShoppingBagIcon,
   UserIcon, ShoppingCartIcon, Cog6ToothIcon,
   ShieldCheckIcon, EyeIcon, ArrowLeftOnRectangleIcon,
-  ChevronLeftIcon
 } from 'react-native-heroicons/outline';
 import {
   ShoppingCartIcon as ShoppingCartIconSolid,
-  ShieldCheckIcon as ShieldCheckIconSolid
+  ShieldCheckIcon as ShieldCheckIconSolid,
+  ChevronLeftIcon
 } from 'react-native-heroicons/solid';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
@@ -125,14 +125,12 @@ const ProfileScreen = () => {
       </View>
 
       <SafeAreaView style={{ flex: 1 }}>
+        <StatusBar style="dark" />
         {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.backButton}
-            >
-              <ChevronLeftIcon size={28} color="#1A1A1A" />
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+              <ChevronLeftIcon size="23" stroke={50} color="white" />
             </TouchableOpacity>
             <View style={styles.userInfo}>
               <View style={styles.avatarContainer}>
@@ -143,7 +141,7 @@ const ProfileScreen = () => {
                 <View style={styles.statusDot} />
               </View>
               <View style={styles.nameContainer}>
-                <Text style={styles.greetingText}>Hi, {userData.fullName?.split(' ')[0] || 'Guest'}</Text>               
+                <Text style={styles.greetingText}>Hi, {userData.fullName?.split(' ')[0] || 'Guest'}</Text>
               </View>
             </View>
           </View>
@@ -151,7 +149,7 @@ const ProfileScreen = () => {
             onPress={() => navigation.navigate('EditProfile', { userData })}
             style={styles.settingsButton}
           >
-            <Cog6ToothIcon size={28} color="#1A1A1A" />            
+            <Cog6ToothIcon size={28} color="#1A1A1A" />
           </TouchableOpacity>
         </View>
 
@@ -262,7 +260,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  backButton: {
+  headerButton: {
     padding: 8,
     backgroundColor: 'white',
     borderRadius: 12,
