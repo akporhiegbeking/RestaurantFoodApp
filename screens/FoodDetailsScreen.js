@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, Text, Image, TouchableOpacity, ActivityIndicator, 
-  ScrollView,
+import {
+    View, Text, Image, TouchableOpacity, ActivityIndicator,
+    ScrollView,
 } from 'react-native';
-import { 
-  ChevronLeftIcon, MinusIcon, PlusIcon, FireIcon, ClockIcon, StarIcon,
-  RectangleStackIcon, ShoppingBagIcon
+import {
+    ChevronLeftIcon, MinusIcon, PlusIcon, FireIcon, ClockIcon, StarIcon,
+    RectangleStackIcon, ShoppingBagIcon
 } from 'react-native-heroicons/outline';
 import { Ionicons } from '@expo/vector-icons';
 const HeartIconSolid = (props) => <Ionicons name="heart" {...props} />;
@@ -13,13 +13,14 @@ const HeartIconOutline = (props) => <Ionicons name="heart-outline" {...props} />
 import { useNavigation } from '@react-navigation/native';
 import * as Animatable from 'react-native-animatable';
 import { auth, db } from '../constants/firebase';
-import { 
+import {
     collection, getDocs, addDoc, query, where, deleteDoc, doc, updateDoc,
-    onSnapshot 
+    onSnapshot
 } from 'firebase/firestore';
 import Toast from 'react-native-root-toast';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 export default function FoodDetailsScreen(props) {
     let item = props.route.params;
@@ -41,7 +42,7 @@ export default function FoodDetailsScreen(props) {
                     where('food_id', '==', item.id)
                 );
                 const querySnapshot = await getDocs(cartItemsQuery);
-                
+
                 if (!querySnapshot.empty) {
                     // Item is in cart
                     const cartDoc = querySnapshot.docs[0];
@@ -124,8 +125,8 @@ export default function FoodDetailsScreen(props) {
                 food_id: item.id,
                 quantity: quantity,
                 price: item.price,
-                name: item.name, 
-                imageUrl: item.imageUrl,  
+                name: item.name,
+                imageUrl: item.imageUrl,
             });
             Toast.show('Item added to cart!', {
                 duration: Toast.durations.SHORT,
@@ -225,27 +226,28 @@ export default function FoodDetailsScreen(props) {
 
     return (
         <View style={{ flex: 1, backgroundColor: 'white' }}>
+            <StatusBar style="light" translucent backgroundColor="transparent" />
             {/* Blurred Background Header */}
             <Image
-                style={{ borderBottomLeftRadius: 50, borderBottomRightRadius: 50, height: 420, width: '100%', position: 'absolute' }}
+                style={{ borderBottomLeftRadius: 50, borderBottomRightRadius: 50, height: 420, width: '100%', position: 'absolute', top: 0 }}
                 source={require('../assets/images/background.png')}
                 blurRadius={40}
             />
-            
+
             <SafeAreaView style={{ flex: 1 }}>
                 {/* Header Controls */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: 20, alignItems: 'center', marginTop: 10 }}>
-                    <TouchableOpacity 
-                        onPress={() => navigation.goBack()} 
+                    <TouchableOpacity
+                        onPress={() => navigation.goBack()}
                         style={{ backgroundColor: 'white', padding: 12, borderRadius: 20, shadowColor: '#000', shadowOpacity: 0.1, elevation: 5 }}
                     >
                         <ChevronLeftIcon size={24} color="black" />
                     </TouchableOpacity>
 
-                    <TouchableOpacity 
-                        onPress={handleSaveItem} 
+                    <TouchableOpacity
+                        onPress={handleSaveItem}
                         style={{ backgroundColor: 'white', padding: 12, borderRadius: 20, shadowColor: '#000', shadowOpacity: 0.1, elevation: 5 }}
-                    >                       
+                    >
                         {liked ? (
                             <HeartIconSolid size={24} color="red" />
                         ) : (
@@ -257,14 +259,14 @@ export default function FoodDetailsScreen(props) {
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
                     {/* Food Image and Title */}
                     <View style={{ alignItems: 'center', marginTop: 20 }}>
-                        <Animatable.Image 
+                        <Animatable.Image
                             animation="bounceIn"
                             duration={1200}
-                            style={{ height: 260, width: 260 }} 
-                            source={{ uri: item.imageUrl }} 
+                            style={{ height: 200, width: 200 }}
+                            source={{ uri: item.imageUrl }}
                             resizeMode="contain"
                         />
-                        <Animatable.Text 
+                        <Animatable.Text
                             animation="fadeInUp"
                             style={{ fontSize: 32, fontWeight: '800', color: 'white', marginTop: 10, textAlign: 'center', textShadowColor: 'rgba(0,0,0,0.2)', textShadowRadius: 10 }}
                         >
@@ -272,22 +274,22 @@ export default function FoodDetailsScreen(props) {
                         </Animatable.Text>
 
                         {/* Availability Status */}
-                        <Animatable.View 
+                        <Animatable.View
                             animation="fadeInUp"
                             delay={400}
-                            style={{ 
-                                marginTop: 8, 
-                                paddingHorizontal: 12, 
-                                paddingVertical: 6, 
-                                borderRadius: 15, 
+                            style={{
+                                marginTop: 8,
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                                borderRadius: 15,
                                 backgroundColor: foodData.isAvailable !== false ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
                                 borderWidth: 1,
                                 borderColor: foodData.isAvailable !== false ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'
                             }}
                         >
-                            <Text style={{ 
-                                fontSize: 13, 
-                                fontWeight: 'bold', 
+                            <Text style={{
+                                fontSize: 13,
+                                fontWeight: 'bold',
                                 color: foodData.isAvailable !== false ? '#22C55E' : '#EF4444',
                                 letterSpacing: 0.5
                             }}>
@@ -297,19 +299,19 @@ export default function FoodDetailsScreen(props) {
                     </View>
 
                     {/* Quantity Stepper */}
-                    <Animatable.View 
+                    <Animatable.View
                         animation="fadeInUp"
                         delay={300}
                         style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 25, padding: 4, marginTop: 20, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 }}
                     >
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             onPress={() => syncQuantity(Math.max(1, quantity - 1))}
                             style={{ backgroundColor: '#F3F4F6', padding: 12, borderRadius: 20 }}
                         >
                             <MinusIcon size={20} color="black" />
                         </TouchableOpacity>
                         <Text style={{ fontSize: 20, fontWeight: 'bold', marginHorizontal: 20 }}>{quantity}</Text>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             onPress={() => syncQuantity(quantity + 1)}
                             style={{ backgroundColor: '#F3F4F6', padding: 12, borderRadius: 20 }}
                         >
@@ -317,37 +319,16 @@ export default function FoodDetailsScreen(props) {
                         </TouchableOpacity>
                     </Animatable.View>
 
-                    {/* Stats Section */}
-                    <Animatable.View 
-                        animation="fadeInUp"
-                        delay={500}
-                        style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 30, paddingHorizontal: 10 }}
-                    >
-                        {[
-                            { icon: <FireIcon size={22} color="#EF4444" />, label: '130 cal' },
-                            { icon: <ClockIcon size={22} color="#F59E0B" />, label: '15-20 min' },
-                            { icon: <HeartIconOutline size={22} color="#DB2777" />, label: '4.8 vote' },
-                            { icon: <RectangleStackIcon size={22} color="#10B981" />, label: '350 g' }
-                        ].map((stat, idx) => (
-                            <View key={idx} style={{ alignItems: 'center' }}>
-                                <View style={{ backgroundColor: '#F9FAFB', padding: 10, borderRadius: 15, marginBottom: 5 }}>
-                                    {stat.icon}
-                                </View>
-                                <Text style={{ fontSize: 13, fontWeight: '600', color: '#4B5563' }}>{stat.label}</Text>
-                            </View>
-                        ))}
-                    </Animatable.View>
-
                     {/* Description Section */}
                     <View style={{ paddingHorizontal: 20, marginTop: 35 }}>
-                        <Animatable.Text 
-                            animation="fadeInUp" 
+                        <Animatable.Text
+                            animation="fadeInUp"
                             delay={600}
                             style={{ fontSize: 24, fontWeight: 'bold', color: '#1F2937' }}
                         >
                             Description
                         </Animatable.Text>
-                        <Animatable.Text 
+                        <Animatable.Text
                             animation="fadeInUp"
                             delay={700}
                             style={{ fontSize: 15, color: '#6B7280', marginTop: 12, lineHeight: 24, letterSpacing: 0.3 }}
@@ -358,14 +339,14 @@ export default function FoodDetailsScreen(props) {
                 </ScrollView>
 
                 {/* Footer Section */}
-                <Animatable.View 
+                <Animatable.View
                     animation="fadeInUp"
                     delay={800}
-                    style={{ 
-                        flexDirection: 'row', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        paddingHorizontal: 20, 
+                    style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        paddingHorizontal: 20,
                         paddingVertical: 20,
                         backgroundColor: 'white',
                         borderTopLeftRadius: 40,
@@ -384,16 +365,16 @@ export default function FoodDetailsScreen(props) {
                             ~ ₦ {(item.price * quantity).toLocaleString()}
                         </Text>
                     </View>
-                    
-                    <TouchableOpacity 
+
+                    <TouchableOpacity
                         onPress={added ? handleRemoveFromCart : handleAddToCart}
                         disabled={loading || foodData.isAvailable === false}
-                        style={{ 
-                            backgroundColor: foodData.isAvailable === false ? '#9CA3AF' : (added ? '#EF4444' : '#001F33'), 
+                        style={{
+                            backgroundColor: foodData.isAvailable === false ? '#9CA3AF' : (added ? '#EF4444' : '#001F33'),
                             flexDirection: 'row',
                             alignItems: 'center',
-                            paddingHorizontal: 30, 
-                            paddingVertical: 18, 
+                            paddingHorizontal: 30,
+                            paddingVertical: 18,
                             borderRadius: 25,
                             shadowColor: foodData.isAvailable === false ? '#9CA3AF' : (added ? '#EF4444' : '#001F33'),
                             shadowOpacity: 0.3,

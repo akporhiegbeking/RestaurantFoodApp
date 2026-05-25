@@ -6,6 +6,7 @@ import { auth, db } from '../constants/firebase';
 import { MaterialIcons } from '@expo/vector-icons';
 import { ChevronLeftIcon } from 'react-native-heroicons/solid';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 const OrdersListScreen = () => {
   const [orders, setOrders] = useState([]);
@@ -23,10 +24,10 @@ const OrdersListScreen = () => {
         const orderData = doc.data();
         const foodItems = orderData.foodItems || [];
         foodItems.forEach((foodItem, index) => {
-          fetchedOrders.push({ 
-            ...foodItem, 
-            orderId: doc.id, 
-            index, 
+          fetchedOrders.push({
+            ...foodItem,
+            orderId: doc.id,
+            index,
             orderStatus: orderData.status || 'pending',
             totalPrice: orderData.totalPrice,
             paymentStatus: orderData.paymentStatus,
@@ -48,18 +49,18 @@ const OrdersListScreen = () => {
   }, []);
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.orderItem}
       onPress={() => navigation.navigate('OrderDetails', { order: item })}
     >
       <Image source={{ uri: item.imageUrl || 'https://via.placeholder.com/150' }} style={styles.image} />
-      
+
       <View style={styles.orderInfo}>
         <View style={styles.orderHeaderRow}>
           <Text style={styles.orderName}>{item.name}</Text>
           <Text style={styles.orderPrice}>₦{item.price}</Text>
         </View>
-        
+
         <View style={styles.orderSubRow}>
           <Text style={styles.orderId}>Order #{item.orderId.substring(0, 8)}...</Text>
           <Text style={styles.orderQuantity}>Qty: {item.quantity}</Text>
@@ -83,25 +84,29 @@ const OrdersListScreen = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ChevronLeftIcon size="23" color="white" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}> Orders Placed</Text>
-      </View>
-      {orders.length === 0 ? (
-        <View style={styles.noOrdersContainer}>
-          <Text style={styles.noOrdersText}>No orders found</Text>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <StatusBar style="light" />
+
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <ChevronLeftIcon size="23" color="white" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}> Orders Placed</Text>
         </View>
-      ) : (
-        <FlatList
-          data={orders}
-          renderItem={renderItem}
-          keyExtractor={(item) => `${item.orderId}-${item.food_id}-${item.index}`} // Ensure unique key
-          contentContainerStyle={styles.listContainer}
-        />
-      )}
+        {orders.length === 0 ? (
+          <View style={styles.noOrdersContainer}>
+            <Text style={styles.noOrdersText}>No orders found</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={orders}
+            renderItem={renderItem}
+            keyExtractor={(item) => `${item.orderId}-${item.food_id}-${item.index}`} // Ensure unique key
+            contentContainerStyle={styles.listContainer}
+          />
+        )}
+      </View>
     </SafeAreaView>
   );
 };
@@ -111,6 +116,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     // marginTop: 10,
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#000',
   },
   loadingContainer: {
     flex: 1,

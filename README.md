@@ -16,7 +16,7 @@ A premium, feature-rich food delivery application built with React Native and Ex
 - **Dynamic Avatars**: Automated avatar generation using DiceBear or BlueSky APIs based on user count.
 
 ### 🍱 Food Exploration
-- **Categorized Browsing**: Quickly find meals under categories like Burger, Pizza, Sushi, Kebab, and Sweets.
+- **Categorized Browsing**: Quickly find meals under categories like Rice, Swallow, Burger, Drinks, and Snacks.
 - **Real-time Availability**: Live stock status (Available vs Out of Stock) reflected instantly from Firestore.
 - **Advanced Search**: Instant filtering of food items by name.
 - **Detailed View**: View calories, estimated prep time, weight, and detailed descriptions for every meal.
@@ -64,7 +64,7 @@ Contains the menu items offered by the restaurant.
   "name": "Double Cheese Burger",
   "price": 4500,
   "imageUrl": "https://image_url.com",
-  "category": "Burger",
+  "category": "Rice",
   "description": "Double patty with extra cheese...",
   "isAvailable": true,
   "rating": 4.8

@@ -1,15 +1,16 @@
-import { 
-  View,  Text, Image, ScrollView, TouchableOpacity, 
+import {
+  View, Text, Image, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl, TextInput, FlatList, Dimensions
 } from 'react-native';
 import React, { useState, useEffect, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { 
+import {
   ShoppingBagIcon, MagnifyingGlassIcon, AdjustmentsHorizontalIcon, UserIcon,
   DocumentTextIcon, ChevronRightIcon
 } from 'react-native-heroicons/outline';
 import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
 import FoodCard from '../components/FoodCard';
 import { collection, getDocs, onSnapshot, query, where } from 'firebase/firestore';
 import { auth, db } from '../constants/firebase';
@@ -17,11 +18,10 @@ import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
-const categories = ['Burger', 'Pizza', 'Sushi', 'Kebab', 'Sweet'];
-
 export default function HomeScreen() {
   const [foodItems, setFoodItems] = useState([]);
-  const [activeCategory, setActiveCategory] = useState('Burger');
+  const [categories, setCategories] = useState(['All']);
+  const [activeCategory, setActiveCategory] = useState('All');
   const navigation = useNavigation();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -33,8 +33,13 @@ export default function HomeScreen() {
       const foodCollection = collection(db, 'foods');
       const foodSnapshot = await getDocs(foodCollection);
       const foodList = foodSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
+
       setFoodItems(foodList);
+
+      // Extract unique categories
+      const uniqueCategories = ['All', ...new Set(foodList.map(item => item.category).filter(Boolean))];
+      setCategories(uniqueCategories);
+
       // Cache data for offline viewing
       await AsyncStorage.setItem('foodItems', JSON.stringify(foodList));
     } catch (error) {
@@ -50,7 +55,13 @@ export default function HomeScreen() {
       try {
         const cachedData = await AsyncStorage.getItem('foodItems');
         if (cachedData) {
-          setFoodItems(JSON.parse(cachedData));
+          const parsedData = JSON.parse(cachedData);
+          setFoodItems(parsedData);
+
+          // Also set categories from cache
+          const uniqueCategories = ['All', ...new Set(parsedData.map(item => item.category).filter(Boolean))];
+          setCategories(uniqueCategories);
+
           setLoading(false);
         }
       } catch (error) {
@@ -94,45 +105,54 @@ export default function HomeScreen() {
     setRefreshing(true);
     fetchFoodItems().then(() => setRefreshing(false));
   }, []);
-  
+
   return (
     <View style={{ flex: 1 }}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+
+      {/* Blurred Status Bar Background */}
+      <Image
+        source={require('../assets/images/background.png')}
+        style={{ position: 'absolute', top: 0, width: '100%', height: 120 }}
+        blurRadius={40}
+      />
+
       <LinearGradient
         colors={['#FFD700', '#F59E0B', '#FFFFFF', '#001F33']}
         locations={[0, 0.1, 0.3, 0.7]}
         style={{ position: 'absolute', width: '100%', height: '100%' }}
       />
-      
+
       <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView 
+        <ScrollView
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
           {/* Header */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginHorizontal: 20, marginTop: 10 }}>
             {/* Profile Section (Left) */}
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => navigation.navigate('Profile')}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
             >
-              <View style={{ 
-                padding: 2, 
-                backgroundColor: 'white', 
+              <View style={{
+                padding: 2,
+                backgroundColor: 'white',
                 borderRadius: 25,
                 shadowColor: '#000',
                 shadowOpacity: 0.1,
                 shadowRadius: 5,
                 elevation: 3
               }}>
-                <Image 
-                  source={userData?.imageUrl ? { uri: userData.imageUrl } : require('../assets/images/avatar.png')} 
+                <Image
+                  source={userData?.imageUrl ? { uri: userData.imageUrl } : require('../assets/images/avatar.png')}
                   style={{ height: 48, width: 48, borderRadius: 24 }}
                 />
               </View>
               <View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <Text style={{ fontSize: 14, color: 'rgba(0,0,0,0.6)', fontWeight: '500' }}>Welcome back,</Text>
-                  <ChevronRightIcon size={20} color="rgba(0,0,0,0.4)" style={{ fontWeight: 'bold'}} />
+                  <ChevronRightIcon size={20} color="rgba(0,0,0,0.4)" style={{ fontWeight: 'bold' }} />
                 </View>
                 <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1A1A1A' }}>
                   {userData?.fullName?.split(' ')[0] || 'Guest'}
@@ -143,7 +163,7 @@ export default function HomeScreen() {
             {/* Icons Area (Right) */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
               {/* Orders List Icon */}
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => navigation.navigate('OrdersList')}
                 style={{ padding: 5 }}
               >
@@ -151,7 +171,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
 
               {/* Cart Icon with Badge */}
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => navigation.navigate('Cart')}
                 style={{ padding: 5 }}
               >
@@ -175,24 +195,24 @@ export default function HomeScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, marginTop: 30 }}>
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 20, paddingHorizontal: 15, height: 60, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 }}>
               <MagnifyingGlassIcon size={24} color="#999" />
-              <TextInput 
-                placeholder="Search" 
+              <TextInput
+                placeholder="Search"
                 style={{ flex: 1, marginLeft: 10, fontSize: 18, color: '#333' }}
               />
             </View>
           </View>
 
           {/* Categories */}
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 20, marginTop: 30 }}
           >
             {categories.map((cat, index) => {
               const isActive = activeCategory === cat;
               return (
-                <TouchableOpacity 
-                  key={index} 
+                <TouchableOpacity
+                  key={index}
                   onPress={() => setActiveCategory(cat)}
                   style={{ marginRight: 30, alignItems: 'center' }}
                 >
@@ -212,9 +232,11 @@ export default function HomeScreen() {
                 <ActivityIndicator size="large" color="orange" />
               </View>
             ) : (
-              foodItems.map((item, index) => (
-                <FoodCard item={item} index={index} key={index} />
-              ))
+              foodItems
+                .filter(item => activeCategory === 'All' || item.category === activeCategory)
+                .map((item, index) => (
+                  <FoodCard item={item} index={index} key={index} />
+                ))
             )}
           </View>
         </ScrollView>

@@ -1,4 +1,4 @@
-import { 
+import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
   Image, ActivityIndicator,
 } from 'react-native';
@@ -10,6 +10,7 @@ import { collection, getDoc, getDocs, query, where, deleteDoc, doc, updateDoc } 
 import Toast from 'react-native-root-toast';
 import { ChevronLeftIcon } from 'react-native-heroicons/solid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StatusBar } from 'expo-status-bar';
 
 const CartScreen = () => {
   const navigation = useNavigation();
@@ -17,8 +18,8 @@ const CartScreen = () => {
   const [totalPrice, setTotalPrice] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [userData, setUserData] = useState({}); 
-  const [paymentMethod, setPaymentMethod] = useState('Pay now'); 
+  const [userData, setUserData] = useState({});
+  const [paymentMethod, setPaymentMethod] = useState('Pay now');
 
   const getUserData = async () => {
     const userQuery = query(
@@ -37,16 +38,16 @@ const CartScreen = () => {
         console.error('User data is null');
         return;
       }
-      
+
       setUserData({
         ...user,
       });
-     
+
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
   };
-  
+
   const fetchData = async () => {
     try {
       await getUserData();
@@ -139,7 +140,7 @@ const CartScreen = () => {
         <View style={styles.priceContainer}>
           <Text style={styles.itemPrice}>
             ₦ {item.price}
-          </Text>          
+          </Text>
         </View>
 
         <Text style={styles.stockInfo}>{item.stockInfo}</Text>
@@ -163,95 +164,96 @@ const CartScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <StatusBar style="light" />
       <View style={styles.container}>
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-          <ChevronLeftIcon size="23" stroke={50} color="white" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cart</Text>       
-        <View style={styles.headerSpacer} />
-      </View>
-
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0000ff" />
-        </View>
-      ) : cartItems.length === 0 ? (
-        <View style={styles.emptyCartContainer}>
-          <Text style={styles.emptyCartText}>No item on your Cart</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Home')} style={styles.shopButton}>
-            <Text style={styles.shopButtonText}>Shop Food Item</Text>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+            <ChevronLeftIcon size="23" stroke={50} color="white" />
           </TouchableOpacity>
+          <Text style={styles.headerTitle}>Cart</Text>
+          <View style={styles.headerSpacer} />
         </View>
-      ) : (
-        <>
-          <View style={styles.summaryContainer}>
-            <Text style={styles.summaryText}>Subtotal</Text>
-            <Text style={styles.totalPrice}>₦ {totalPrice.toFixed(2)}</Text>
-          </View>
 
-          <FlatList
-            data={cartItems}
-            keyExtractor={(item) => item.id}
-            renderItem={renderCartItem}
-            contentContainerStyle={styles.cartList}
-          />
-      
-          <View style={styles.deliveryDetails}>
-            <Text style={styles.deliveryTitle}>Delivery details</Text>
-            <View style={styles.deliveryItem}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={styles.deliveryLabel}>Location</Text>
-                <Text style={[styles.deliveryValue, { marginLeft: 10 }]}>
-                  {userData.home_address?.length > 25 ? userData.home_address.substring(0, 25) + '...' : userData.home_address || ''}
-                </Text>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#0000ff" />
+          </View>
+        ) : cartItems.length === 0 ? (
+          <View style={styles.emptyCartContainer}>
+            <Text style={styles.emptyCartText}>No item on your Cart</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Home')} style={styles.shopButton}>
+              <Text style={styles.shopButtonText}>Shop Food Item</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <View style={styles.summaryContainer}>
+              <Text style={styles.summaryText}>Subtotal</Text>
+              <Text style={styles.totalPrice}>₦ {totalPrice.toFixed(2)}</Text>
+            </View>
+
+            <FlatList
+              data={cartItems}
+              keyExtractor={(item) => item.id}
+              renderItem={renderCartItem}
+              contentContainerStyle={styles.cartList}
+            />
+
+            <View style={styles.deliveryDetails}>
+              <Text style={styles.deliveryTitle}>Delivery details</Text>
+              <View style={styles.deliveryItem}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={styles.deliveryLabel}>Location</Text>
+                  <Text style={[styles.deliveryValue, { marginLeft: 10 }]}>
+                    {userData.home_address?.length > 25 ? userData.home_address.substring(0, 25) + '...' : userData.home_address || ''}
+                  </Text>
+                </View>
+
+                <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={styles.editButton}>
+                  <Text style={styles.editButtonText}>Edit</Text>
+                </TouchableOpacity>
               </View>
 
-              <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={styles.editButton}>
-                <Text style={styles.editButtonText}>Edit</Text>
-              </TouchableOpacity>
+              <View style={styles.deliveryItem}>
+                <Text style={styles.deliveryLabel}>Contact</Text>
+                <Text style={styles.deliveryValue}>{userData.phoneNumber || ''}</Text>
+              </View>
+
+              <View style={styles.deliveryItem}>
+                <Text style={styles.deliveryLabel}>Estimated delivery time</Text>
+                <Text style={styles.deliveryValue}>20 - 50 mins</Text>
+              </View>
+
+              <View style={styles.paymentSection}>
+                <Text style={styles.deliveryTitle}>Payment method</Text>
+                <TouchableOpacity
+                  style={styles.paymentOption}
+                  onPress={() => setPaymentMethod('Pay now')}
+                >
+                  <View style={[styles.radioButton, paymentMethod === 'Pay now' && styles.radioButtonSelected]}>
+                    {paymentMethod === 'Pay now' && <View style={styles.radioInner} />}
+                  </View>
+                  <Text style={styles.paymentOptionText}>Pay now</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.paymentOption}
+                  onPress={() => setPaymentMethod('Pay on Delivery')}
+                >
+                  <View style={[styles.radioButton, paymentMethod === 'Pay on Delivery' && styles.radioButtonSelected]}>
+                    {paymentMethod === 'Pay on Delivery' && <View style={styles.radioInner} />}
+                  </View>
+                  <Text style={styles.paymentOptionText}>Pay on Delivery</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
-            <View style={styles.deliveryItem}>
-              <Text style={styles.deliveryLabel}>Contact</Text>
-              <Text style={styles.deliveryValue}>{userData.phoneNumber || ''}</Text>              
-            </View>
-
-            <View style={styles.deliveryItem}>
-              <Text style={styles.deliveryLabel}>Estimated delivery time</Text>
-              <Text style={styles.deliveryValue}>20 - 50 mins</Text>             
-            </View>
-
-            <View style={styles.paymentSection}>
-              <Text style={styles.deliveryTitle}>Payment method</Text>
-              <TouchableOpacity 
-                style={styles.paymentOption} 
-                onPress={() => setPaymentMethod('Pay now')}
-              >
-                <View style={[styles.radioButton, paymentMethod === 'Pay now' && styles.radioButtonSelected]}>
-                  {paymentMethod === 'Pay now' && <View style={styles.radioInner} />}
-                </View>
-                <Text style={styles.paymentOptionText}>Pay now</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.paymentOption} 
-                onPress={() => setPaymentMethod('Pay on Delivery')}
-              >
-                <View style={[styles.radioButton, paymentMethod === 'Pay on Delivery' && styles.radioButtonSelected]}>
-                  {paymentMethod === 'Pay on Delivery' && <View style={styles.radioInner} />}
-                </View>
-                <Text style={styles.paymentOptionText}>Pay on Delivery</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <TouchableOpacity onPress={handleBuyNow} style={styles.checkoutButton}>
-            <Text style={styles.checkoutButtonText}>Checkout (₦ {totalPrice.toFixed(2)})</Text>
-          </TouchableOpacity>
-        </>
-      )}
+            <TouchableOpacity onPress={handleBuyNow} style={styles.checkoutButton}>
+              <Text style={styles.checkoutButtonText}>Checkout (₦ {totalPrice.toFixed(2)})</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </SafeAreaView>
 

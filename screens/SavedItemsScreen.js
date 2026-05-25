@@ -9,6 +9,7 @@ import { collection, getDocs, query, where, deleteDoc, doc } from 'firebase/fire
 import Toast from 'react-native-root-toast';
 import { ChevronLeftIcon } from 'react-native-heroicons/solid';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 const SavedItemsScreen = () => {
   const navigation = useNavigation();
@@ -68,30 +69,34 @@ const SavedItemsScreen = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-          <ChevronLeftIcon size="23" color="white" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Saved Items</Text>
-        <View style={styles.headerSpacer} />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <StatusBar style="light" />
+      <View style={styles.container}>
+
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+            <ChevronLeftIcon size="23" color="white" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Saved Items</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#0000ff" />
+          </View>
+        ) : savedItems.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No saved items</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={savedItems}
+            keyExtractor={(item) => item.id}
+            renderItem={renderSavedItem}
+            contentContainerStyle={styles.listContainer}
+          />
+        )}
       </View>
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0000ff" />
-        </View>
-      ) : savedItems.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No saved items</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={savedItems}
-          keyExtractor={(item) => item.id}
-          renderItem={renderSavedItem}
-          contentContainerStyle={styles.listContainer}
-        />
-      )}
     </SafeAreaView>
   );
 };
@@ -101,8 +106,12 @@ export default SavedItemsScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
-    // marginTop: 40,
+    backgroundColor: '#fff',
+    // marginTop: 10,
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#000',
   },
   header: {
     flexDirection: 'row',
