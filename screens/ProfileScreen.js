@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  ActivityIndicator, Image, StatusBar, ImageBackground, Linking, Alert
+  ActivityIndicator, StatusBar, Linking, Alert
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../constants/firebase';
@@ -21,6 +22,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
@@ -111,11 +114,14 @@ const ProfileScreen = () => {
   }
 
   return (
-    <ImageBackground
-      source={require('../assets/images/background.png')}
-      style={styles.container}
-      blurRadius={20}
-    >
+    <View style={styles.container}>
+      <Image
+        source={require('../assets/images/background.png')}
+        placeholder={{ blurhash }}
+        contentFit="cover"
+        transition={1000}
+        style={[StyleSheet.absoluteFill, { blurRadius: 20 }]}
+      />
       {/* Top Background Gradient */}
       <View style={styles.headerBackground}>
         <LinearGradient
@@ -136,6 +142,9 @@ const ProfileScreen = () => {
               <View style={styles.avatarContainer}>
                 <Image
                   source={userData.imageUrl ? { uri: userData.imageUrl } : require('../assets/images/avatar.png')}
+                  placeholder={{ blurhash }}
+                  contentFit="cover"
+                  transition={1000}
                   style={styles.avatar}
                 />
                 <View style={styles.statusDot} />
@@ -211,7 +220,7 @@ const ProfileScreen = () => {
           </Animatable.View>
         </ScrollView>
       </SafeAreaView>
-    </ImageBackground>
+    </View>
   );
 };
 

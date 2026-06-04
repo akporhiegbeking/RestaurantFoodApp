@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-    View, Text, Image, TouchableOpacity, ActivityIndicator,
+    View, Text, TouchableOpacity, ActivityIndicator,
     ScrollView,
 } from 'react-native';
+import { Image } from 'expo-image';
 import {
     MinusIcon, PlusIcon, FireIcon, ClockIcon, StarIcon,
     RectangleStackIcon, ShoppingBagIcon
@@ -22,6 +23,8 @@ import Toast from 'react-native-root-toast';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+
+const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
 
 export default function FoodDetailsScreen(props) {
     let item = props.route.params;
@@ -232,6 +235,9 @@ export default function FoodDetailsScreen(props) {
             <Image
                 style={{ borderBottomLeftRadius: 50, borderBottomRightRadius: 50, height: 420, width: '100%', position: 'absolute', top: 0 }}
                 source={require('../assets/images/background.png')}
+                placeholder={{ blurhash }}
+                contentFit="cover"
+                transition={1000}
                 blurRadius={40}
             />
 
@@ -257,12 +263,12 @@ export default function FoodDetailsScreen(props) {
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
                     {/* Food Image and Title */}
                     <View style={{ alignItems: 'center', marginTop: 20 }}>
-                        <Animatable.Image
-                            animation="bounceIn"
-                            duration={1200}
-                            style={{ height: 200, width: 200 }}
+                        <Image
                             source={{ uri: item.imageUrl }}
-                            resizeMode="contain"
+                            placeholder={{ blurhash }}
+                            contentFit="contain"
+                            transition={1000}
+                            style={{ height: 200, width: 200 }}
                         />
                         <Animatable.Text
                             animation="fadeInUp"

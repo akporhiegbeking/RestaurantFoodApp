@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeftIcon } from 'react-native-heroicons/solid';
@@ -9,6 +9,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar as RNStatusBar } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
+
+const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
 
 const OrderDetails = () => {
   const navigation = useNavigation();
@@ -46,7 +48,13 @@ const OrderDetails = () => {
           <>
             {/* Order Info Card */}
             <View style={styles.itemCard}>
-              <Image source={{ uri: order.imageUrl || 'https://via.placeholder.com/150' }} style={styles.itemImage} />
+              <Image
+                source={{ uri: order.imageUrl || 'https://via.placeholder.com/150' }}
+                placeholder={{ blurhash }}
+                contentFit="cover"
+                transition={1000}
+                style={styles.itemImage}
+              />
               <View style={styles.itemDetails}>
                 <Text style={styles.itemName}>{order.name}</Text>
                 <Text style={styles.itemPrice}>₦{order.price}</Text>

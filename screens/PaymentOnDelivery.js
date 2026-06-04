@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Image
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../constants/firebase';
@@ -9,6 +9,9 @@ import { ChevronLeftIcon } from 'react-native-heroicons/solid';
 import Toast from 'react-native-root-toast';
 import { StatusBar as RNStatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+/* PaymentOnDelivery.js: No specific food item images in the code views I have, but I'll add the blurhash just in case I missed any Image usage in the full file. */
+const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
 
 const PaymentOnDelivery = () => {
   const navigation = useNavigation();

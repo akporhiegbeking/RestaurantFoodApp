@@ -1,7 +1,8 @@
 import {
-  View, Text, Image, ScrollView, TouchableOpacity,
+  View, Text, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl, TextInput, FlatList, Dimensions
 } from 'react-native';
+import { Image } from 'expo-image';
 import React, { useState, useEffect, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,6 +16,8 @@ import FoodCard from '../components/FoodCard';
 import { collection, getDocs, onSnapshot, query, where } from 'firebase/firestore';
 import { auth, db } from '../constants/firebase';
 import { useNavigation } from '@react-navigation/native';
+
+const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
 
 const { width } = Dimensions.get('window');
 
@@ -95,7 +98,8 @@ export default function HomeScreen() {
     if (auth.currentUser) {
       const cartQuery = query(collection(db, 'cart'), where('uid', '==', auth.currentUser.uid));
       const unsubscribe = onSnapshot(cartQuery, (snapshot) => {
-        setCartCount(snapshot.size);
+        const activeItems = snapshot.docs.filter(doc => doc.data().orderStatus !== 'placed');
+        setCartCount(activeItems.length);
       });
       return () => unsubscribe();
     }
@@ -113,6 +117,9 @@ export default function HomeScreen() {
       {/* Blurred Status Bar Background */}
       <Image
         source={require('../assets/images/background.png')}
+        placeholder={{ blurhash }}
+        contentFit="cover"
+        transition={1000}
         style={{ position: 'absolute', top: 0, width: '100%', height: 120 }}
         blurRadius={40}
       />
@@ -151,6 +158,9 @@ export default function HomeScreen() {
                   }}>
                     <Image
                       source={userData?.imageUrl ? { uri: userData.imageUrl } : require('../assets/images/avatar.png')}
+                      placeholder={{ blurhash }}
+                      contentFit="cover"
+                      transition={1000}
                       style={{ height: 48, width: 48, borderRadius: 24 }}
                     />
                   </View>

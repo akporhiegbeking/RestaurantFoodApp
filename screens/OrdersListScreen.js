@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../constants/firebase';
@@ -7,6 +7,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { ChevronLeftIcon } from 'react-native-heroicons/solid';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+
+const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
 
 const OrdersListScreen = () => {
   const [orders, setOrders] = useState([]);
@@ -53,7 +55,13 @@ const OrdersListScreen = () => {
       style={styles.orderItem}
       onPress={() => navigation.navigate('OrderDetails', { order: item })}
     >
-      <Image source={{ uri: item.imageUrl || 'https://via.placeholder.com/150' }} style={styles.image} />
+      <Image
+        source={{ uri: item.imageUrl || 'https://via.placeholder.com/150' }}
+        placeholder={{ blurhash }}
+        contentFit="cover"
+        transition={1000}
+        style={styles.image}
+      />
 
       <View style={styles.orderInfo}>
         <View style={styles.orderHeaderRow}>

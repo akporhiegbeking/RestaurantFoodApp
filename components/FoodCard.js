@@ -1,27 +1,31 @@
-import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native'
-import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Dimensions } from 'react-native'
+import React, { useState, useEffect, memo } from 'react';
+import { Image } from 'expo-image';
 import { ShoppingBagIcon } from 'react-native-heroicons/solid'
 import * as Animatable from 'react-native-animatable';
 import { useNavigation } from '@react-navigation/native';
-import { auth, db } from '../constants/firebase'; 
+import { auth, db } from '../constants/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import Toast from 'react-native-root-toast';
+
+const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
 
 const { width } = Dimensions.get('window');
 const cardWidth = width * 0.44;
 
-export default function FoodCard({item, index}) {
+const FoodCard = memo(({ item, index }) => {
   const navigation = useNavigation();
 
   const handleAddToCart = async () => {
     try {
       await addDoc(collection(db, 'cart'), {
-        uid: auth.currentUser.uid, 
+        uid: auth.currentUser.uid,
         food_id: item.id,
         quantity: 1,
         price: item.price,
-        name: item.name,  
-        imageUrl: item.imageUrl, 
+        name: item.name,
+        imageUrl: item.imageUrl,
+        orderStatus: 'active', // Ensure it's marked as active
       });
       Toast.show('Item added to cart!', {
         duration: Toast.durations.SHORT,
@@ -40,13 +44,15 @@ export default function FoodCard({item, index}) {
     >
       <TouchableOpacity
         activeOpacity={0.8}
-        onPress={() => navigation.navigate('FoodDetails', {...item})}
+        onPress={() => navigation.navigate('FoodDetails', { ...item })}
         style={styles.glassTop}
       >
-        <Image 
-          source={{ uri: item.imageUrl }} 
+        <Image
+          source={{ uri: item.imageUrl }}
+          placeholder={{ blurhash }}
+          contentFit="contain"
+          transition={1000}
           style={styles.image}
-          resizeMode="contain"
         />
       </TouchableOpacity>
 
@@ -57,7 +63,7 @@ export default function FoodCard({item, index}) {
         <Text style={styles.description} numberOfLines={2}>
           {item.description}
         </Text>
-        
+
         <View style={styles.footer}>
           <Text style={styles.price}>₦ {item.price}</Text>
           <TouchableOpacity

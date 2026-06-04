@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  FlatList, Image, ActivityIndicator,
+  FlatList, ActivityIndicator,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { auth, db } from '../constants/firebase';
 import { useNavigation } from '@react-navigation/native';
 import { collection, getDocs, query, where, deleteDoc, doc } from 'firebase/firestore';
@@ -10,6 +11,8 @@ import Toast from 'react-native-root-toast';
 import { ChevronLeftIcon } from 'react-native-heroicons/solid';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+
+const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
 
 const SavedItemsScreen = () => {
   const navigation = useNavigation();
@@ -57,7 +60,13 @@ const SavedItemsScreen = () => {
 
   const renderSavedItem = ({ item }) => (
     <View style={styles.savedItem}>
-      <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
+      <Image
+        source={{ uri: item.imageUrl }}
+        placeholder={{ blurhash }}
+        contentFit="cover"
+        transition={1000}
+        style={styles.itemImage}
+      />
       <View style={styles.itemDetails}>
         <Text style={styles.itemName}>{item.name}</Text>
         <Text style={styles.itemPrice}>₦ {item.price}</Text>
