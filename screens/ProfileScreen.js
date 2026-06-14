@@ -9,15 +9,9 @@ import { signOut } from 'firebase/auth';
 import { auth, db } from '../constants/firebase';
 import { getDocs, query, collection, where } from 'firebase/firestore';
 import {
-  ChevronRightIcon, HeartIcon, ShoppingBagIcon,
-  UserIcon, ShoppingCartIcon, Cog6ToothIcon,
-  ShieldCheckIcon, EyeIcon, ArrowLeftOnRectangleIcon,
+  ChevronLeftIcon, Cog6ToothIcon, EyeIcon, UserIcon, HeartIcon, 
+  ShieldCheckIcon, ArrowRightOnRectangleIcon, ChevronRightIcon
 } from 'react-native-heroicons/outline';
-import {
-  ShoppingCartIcon as ShoppingCartIconSolid,
-  ShieldCheckIcon as ShieldCheckIconSolid,
-  ChevronLeftIcon
-} from 'react-native-heroicons/solid';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -136,7 +130,7 @@ const ProfileScreen = () => {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-              <ChevronLeftIcon size="23" stroke={50} color="white" />
+              <ChevronLeftIcon size={23} color="#1A1A1A" />
             </TouchableOpacity>
             <View style={styles.userInfo}>
               <View style={styles.avatarContainer}>
@@ -187,19 +181,9 @@ const ProfileScreen = () => {
               onPress={() => navigation.navigate('EditProfile', { userData })}
             />
             <MenuItem
-              label="My Orders"
-              icon={<ShoppingBagIcon size={22} color="#F59E0B" />}
-              onPress={() => navigation.navigate('OrdersList')}
-            />
-            <MenuItem
               label="My Saved Items"
               icon={<HeartIcon size={22} color="#F59E0B" />}
               onPress={() => navigation.navigate('SavedItems')}
-            />
-            <MenuItem
-              label="My Cart"
-              icon={<ShoppingCartIcon size={22} color="#F59E0B" />}
-              onPress={() => navigation.navigate('Cart')}
               isLast
             />
           </Animatable.View>
@@ -212,7 +196,7 @@ const ProfileScreen = () => {
             />
             <MenuItem
               label="Logout"
-              icon={<ArrowLeftOnRectangleIcon size={22} color="#EF4444" />}
+              icon={<ArrowRightOnRectangleIcon size={22} color="#EF4444" />}
               onPress={handleLogout}
               isLast
               textColor="#EF4444"

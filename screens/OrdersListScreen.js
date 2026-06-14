@@ -1,117 +1,151 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import {
+  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  ActivityIndicator, ScrollView
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../constants/firebase';
-import { MaterialIcons } from '@expo/vector-icons';
-import { ChevronLeftIcon } from 'react-native-heroicons/solid';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  CheckCircleIcon, XCircleIcon, ClockIcon, ChevronLeftIcon
+} from 'react-native-heroicons/solid';
 import { StatusBar } from 'expo-status-bar';
+import React, { useState, useEffect } from 'react';
 
 const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
 
 const OrdersListScreen = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('All');
   const navigation = useNavigation();
 
-  const fetchOrders = async () => {
-    try {
-      const userUID = auth.currentUser.uid;
-      const ordersQuery = query(collection(db, 'orders'), where('user.uid', '==', userUID));
-      const querySnapshot = await getDocs(ordersQuery);
-      const fetchedOrders = [];
+  const statuses = ['All', 'Pending', 'Accepted', 'Preparing', 'Ready', 'Delivered', 'Cancelled'];
 
-      querySnapshot.forEach((doc) => {
-        const orderData = doc.data();
-        const foodItems = orderData.foodItems || [];
-        foodItems.forEach((foodItem, index) => {
-          fetchedOrders.push({
-            ...foodItem,
-            orderId: doc.id,
-            index,
-            orderStatus: orderData.status || 'pending',
-            totalPrice: orderData.totalPrice,
-            paymentStatus: orderData.paymentStatus,
-            createdAt: orderData.createdAt,
-          });
-        });
-      });
+  useEffect(() => {
+    if (!auth.currentUser) return;
 
+    const q = query(
+      collection(db, 'orders'),
+      where('customer.uid', '==', auth.currentUser.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsub = onSnapshot(q, (snapshot) => {
+      const fetchedOrders = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
       setOrders(fetchedOrders);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-    } finally {
       setLoading(false);
+    });
+
+    return () => unsub();
+  }, []);
+
+  const filteredOrders = orders.filter(order => {
+    if (activeTab === 'All') return true;
+    return order.orderStatus === activeTab;
+  });
+
+  const getStatusConfig = (status) => {
+    switch (status) {
+      case 'Delivered': return { color: '#10B981', bg: '#D1FAE5', icon: <CheckCircleIcon size={20} color="#10B981" /> };
+      case 'Cancelled': return { color: '#EF4444', bg: '#FEE2E2', icon: <XCircleIcon size={20} color="#EF4444" /> };
+      case 'Pending Payment': return { color: '#F59E0B', bg: '#FEF3C7', icon: <ClockIcon size={20} color="#F59E0B" /> };
+      default: return { color: '#3B82F6', bg: '#DBEAFE', icon: <ClockIcon size={20} color="#3B82F6" /> };
     }
   };
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
+  const renderItem = ({ item }) => {
+    const status = getStatusConfig(item.orderStatus);
+    const date = item.createdAt?.toDate();
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.orderItem}
-      onPress={() => navigation.navigate('OrderDetails', { order: item })}
-    >
-      <Image
-        source={{ uri: item.imageUrl || 'https://via.placeholder.com/150' }}
-        placeholder={{ blurhash }}
-        contentFit="cover"
-        transition={1000}
-        style={styles.image}
-      />
-
-      <View style={styles.orderInfo}>
-        <View style={styles.orderHeaderRow}>
-          <Text style={styles.orderName}>{item.name}</Text>
-          <Text style={styles.orderPrice}>₦{item.price}</Text>
-        </View>
-
-        <View style={styles.orderSubRow}>
-          <Text style={styles.orderId}>Order #{item.orderId.substring(0, 8)}...</Text>
-          <Text style={styles.orderQuantity}>Qty: {item.quantity}</Text>
-        </View>
-
-        <View style={styles.actionRow}>
-          <View style={[styles.statusContainer, { backgroundColor: item.orderStatus === 'completed' ? '#4caf50' : '#ff9800' }]}>
-            <Text style={styles.orderStatus}>{item.orderStatus.toUpperCase()}</Text>
+    return (
+      <TouchableOpacity
+        style={styles.orderCard}
+        onPress={() => navigation.navigate('OrderDetails', { order: item })}
+        activeOpacity={0.7}
+      >
+        <View style={styles.cardHeader}>
+          <View style={styles.orderInfo}>
+            <Text style={styles.orderNumber}>Order #{item.orderNumber || item.id.substring(0, 8)}</Text>
+            <Text style={styles.orderDate}>
+              {date ? date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Recent'}
+            </Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
+            <Text style={[styles.statusText, { color: status.color }]}>{item.orderStatus}</Text>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </SafeAreaView>
+        <View style={styles.divider} />
+
+        <View style={styles.cardBody}>
+          <View style={styles.restaurantSection}>
+            <View style={styles.iconContainer}>
+              {status.icon}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.restaurantName} numberOfLines={1}>{item.restaurantName || 'Restaurant'}</Text>
+              <Text style={styles.itemCount}>{item.foodItems?.length || 0} items</Text>
+            </View>
+          </View>
+          <Text style={styles.totalAmount}>₦{item.totalAmount?.toLocaleString()}</Text>
+        </View>
+      </TouchableOpacity>
     );
-  }
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar style="light" />
-
-      <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" />
+      <View style={styles.content}>
+        {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <ChevronLeftIcon size="23" stroke={50} color="white" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}> Orders Placed</Text>
+          <View style={{ width: 44 }} />
+          <Text style={styles.headerTitle}>My Orders</Text>
+          <View style={{ width: 44 }} />
         </View>
-        {orders.length === 0 ? (
-          <View style={styles.noOrdersContainer}>
-            <Text style={styles.noOrdersText}>No orders found</Text>
+
+        {/* Tabs */}
+        <View style={styles.tabWrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabScrollContent}
+          >
+            {statuses.map((status) => (
+              <TouchableOpacity
+                key={status}
+                onPress={() => setActiveTab(status)}
+                style={[styles.tab, activeTab === status && styles.activeTab]}
+              >
+                <Text style={[styles.tabText, activeTab === status && styles.activeTabText]}>
+                  {status}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {loading ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color="#F59E0B" />
+          </View>
+        ) : filteredOrders.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <Text style={styles.emptyText}>No {activeTab} orders found</Text>
+            <Text style={styles.emptySubtext}>Your hungry belly is waiting for something delicious!</Text>
           </View>
         ) : (
           <FlatList
-            data={orders}
+            data={filteredOrders}
+            keyExtractor={(item) => item.id}
             renderItem={renderItem}
-            keyExtractor={(item) => `${item.orderId}-${item.food_id}-${item.index}`} // Ensure unique key
-            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
           />
         )}
       </View>
@@ -122,111 +156,171 @@ const OrdersListScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    // marginTop: 10,
+    backgroundColor: '#F9FAFB',
   },
-  safeArea: {
+  content: {
     flex: 1,
-    backgroundColor: '#000',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingHorizontal: 20,
   },
   header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 15,
-    backgroundColor: 'black',
+    paddingVertical: 16,
   },
-  headerButton: {
-    marginRight: 10,
+  backButton: {
+    backgroundColor: '#FFFFFF',
+    padding: 10,
+    borderRadius: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#111827',
   },
-  listContainer: {
-    padding: 15,
+  tabWrapper: {
+    marginBottom: 24,
   },
-  orderItem: {
-    flexDirection: 'row',
+  tabScrollContent: {
+    paddingVertical: 4,
+    gap: 8,
+  },
+  tab: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 14,
     alignItems: 'center',
-    padding: 10,
-    backgroundColor: '#fff',
-    marginBottom: 10,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
+    backgroundColor: '#E5E7EB',
+    marginRight: 8,
   },
-  image: {
-    width: 60,
-    height: 60,
-    borderRadius: 10,
-    marginRight: 10,
+  activeTab: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  activeTabText: {
+    color: '#111827',
+    fontWeight: '700',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 50,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#9CA3AF',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    paddingHorizontal: 40,
+  },
+  listContent: {
+    paddingBottom: 30,
+  },
+  orderCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 18,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
   orderInfo: {
     flex: 1,
   },
-  orderName: {
+  orderNumber: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    flex: 1,
-  },
-  orderPrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  orderId: {
-    fontSize: 12,
-    color: '#888',
-  },
-  orderQuantity: {
-    fontSize: 14,
-    color: '#666',
-  },
-  orderHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    fontWeight: '800',
+    color: '#111827',
     marginBottom: 4,
   },
-  orderSubRow: {
+  orderDate: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginBottom: 16,
+  },
+  cardBody: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
   },
-  actionRow: {
+  restaurantSection: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
     alignItems: 'center',
-    marginTop: 5,
-  },
-  statusContainer: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 5,
-  },
-  orderStatus: {
-    fontSize: 12,
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  noOrdersContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginRight: 10,
   },
-  noOrdersText: {
-    fontSize: 18,
-    color: '#888',
+  iconContainer: {
+    width: 40,
+    height: 40,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  restaurantName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 2,
+  },
+  itemCount: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+  totalAmount: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#111827',
   },
 });
 

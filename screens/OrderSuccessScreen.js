@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
-import { StatusBar as RNStatusBar } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 
 const { width, height } = Dimensions.get('window');
 
@@ -34,7 +34,7 @@ const OrderSuccessScreen = () => {
 
   return (
     <View style={styles.container}>
-      <RNStatusBar backgroundColor="#22C55E" barStyle="light-content" />
+      <StatusBar style="light" />
       <LinearGradient
         colors={['#22C55E', '#15803D']}
         style={StyleSheet.absoluteFill}
@@ -42,25 +42,25 @@ const OrderSuccessScreen = () => {
 
       {/* Floating Money Decorations */}
       {[...Array(12)].map((_, i) => (
-        <FloatingMoney 
-          key={i} 
-          delay={i * 400} 
-          startX={Math.random() * width} 
+        <FloatingMoney
+          key={i}
+          delay={i * 400}
+          startX={Math.random() * width}
           startY={height + 50}
         />
       ))}
 
       <View style={styles.content}>
-        <Animatable.Text 
-          animation="fadeInDown" 
+        <Animatable.Text
+          animation="fadeInDown"
           duration={800}
           style={styles.headerTitle}
         >
           Order Placed successfully
         </Animatable.Text>
 
-        <Animatable.View 
-          animation="zoomIn" 
+        <Animatable.View
+          animation="zoomIn"
           duration={1000}
           delay={200}
           style={styles.card}
@@ -69,9 +69,9 @@ const OrderSuccessScreen = () => {
             <View style={styles.heartCircle}>
               <Ionicons name="heart" size={60} color="#22C55E" />
             </View>
-            <Animatable.View 
-              animation="pulse" 
-              iterationCount="infinite" 
+            <Animatable.View
+              animation="pulse"
+              iterationCount="infinite"
               style={styles.pulseContainer}
             />
           </View>
@@ -84,8 +84,8 @@ const OrderSuccessScreen = () => {
           </View>
 
           <View style={styles.actionContainer}>
-            <TouchableOpacity 
-              onPress={() => navigation.navigate('Home')} 
+            <TouchableOpacity
+              onPress={() => navigation.navigate('MainTabs')}
               style={styles.homeButton}
             >
               <Text style={styles.homeButtonText}>Go to Home</Text>

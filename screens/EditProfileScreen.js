@@ -11,7 +11,7 @@ import {
 import { db, auth } from '../constants/firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import Toast from 'react-native-root-toast';
-import { ChevronLeftIcon } from 'react-native-heroicons/solid';
+import { Ionicons } from '@expo/vector-icons';
 
 /* ─────────────────────────────────────────────
    Row Components
@@ -154,7 +154,7 @@ const EditProfileScreen = () => {
       {/* ── Header ── */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-          <ChevronLeftIcon size="23" stroke={50} color="white" />
+          <Ionicons name="chevron-back" size={23} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Account Details</Text>
         {/* Save button top-right */}

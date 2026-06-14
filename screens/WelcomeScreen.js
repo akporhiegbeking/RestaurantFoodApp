@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, Image, StyleSheet, Dimensions, Animated,
+  View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +8,8 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
+
+const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
 
 const GridBackground = () => (
   <View style={styles.gridContainer}>
@@ -62,10 +64,12 @@ export default function WelcomeScreen() {
   return (
     <View style={styles.container}>
       {/* Background image */}
-      <Image
+      <ExpoImage
         source={require('../assets/images/background.png')}
         style={styles.backgroundImage}
-        resizeMode="cover"
+        contentFit="cover"
+        placeholder={{ blurhash }}
+        transition={1000}
         blurRadius={18}
       />
 
@@ -88,7 +92,7 @@ export default function WelcomeScreen() {
         {/* Top tag */}
         <Animated.View style={[styles.tagContainer, { opacity: fadeAnim }]}>
           <View style={styles.tag}>
-            <Text style={styles.tagText}>🍔  RestaurantFoodApp </Text>
+            <Text style={styles.tagText}>🍔  LogisticMobileApp </Text>
           </View>
         </Animated.View>
 
@@ -99,6 +103,7 @@ export default function WelcomeScreen() {
             source={require('../assets/images/burger.png')}
             style={styles.burgerImage}
             contentFit="contain"
+            placeholder={{ blurhash }}
             transition={600}
           />
         </Animated.View>

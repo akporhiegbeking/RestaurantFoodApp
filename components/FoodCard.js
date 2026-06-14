@@ -1,11 +1,11 @@
-import { View, Text, StyleSheet, Dimensions } from 'react-native'
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native'
 import React, { useState, useEffect, memo } from 'react';
 import { Image } from 'expo-image';
-import { ShoppingBagIcon } from 'react-native-heroicons/solid'
+import { Ionicons } from '@expo/vector-icons';
 import * as Animatable from 'react-native-animatable';
 import { useNavigation } from '@react-navigation/native';
 import { auth, db } from '../constants/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, updateDoc, doc, query, where, getDocs } from 'firebase/firestore';
 import Toast from 'react-native-root-toast';
 
 const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
@@ -18,15 +18,52 @@ const FoodCard = memo(({ item, index }) => {
 
   const handleAddToCart = async () => {
     try {
-      await addDoc(collection(db, 'cart'), {
-        uid: auth.currentUser.uid,
-        food_id: item.id,
+      const user = auth.currentUser;
+      if (!user) {
+        Toast.show('Please login to add to cart', {
+          duration: Toast.durations.SHORT,
+          position: Toast.positions.BOTTOM,
+        });
+        return;
+      }
+
+      const cartQuery = query(collection(db, 'carts'), where('userId', '==', user.uid));
+      const cartSnap = await getDocs(cartQuery);
+
+      const newItem = {
+        foodId: item.id || '',
+        merchantId: item.merchantId || item.restaurantId || '',
+        merchantName: item.merchantName || item.restaurantName || '',
+        name: item.name || '',
+        imageUrl: item.imageUrl || '',
+        price: item.price || 0,
         quantity: 1,
-        price: item.price,
-        name: item.name,
-        imageUrl: item.imageUrl,
-        orderStatus: 'active', // Ensure it's marked as active
-      });
+      };
+
+      if (!cartSnap.empty) {
+        const cartDoc = cartSnap.docs[0];
+        const cartRef = doc(db, 'carts', cartDoc.id);
+        const cartData = cartDoc.data();
+        const existingItemIndex = cartData.items.findIndex(i => i.foodId === item.id);
+
+        if (existingItemIndex > -1) {
+          cartData.items[existingItemIndex].quantity += 1;
+        } else {
+          cartData.items.push(newItem);
+        }
+
+        await updateDoc(cartRef, {
+          items: cartData.items,
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        await addDoc(collection(db, 'carts'), {
+          items: [newItem],
+          userId: user.uid,
+          updatedAt: serverTimestamp()
+        });
+      }
+
       Toast.show('Item added to cart!', {
         duration: Toast.durations.SHORT,
         position: Toast.positions.BOTTOM,
@@ -71,13 +108,13 @@ const FoodCard = memo(({ item, index }) => {
             style={styles.cartButton}
             onPress={handleAddToCart}
           >
-            <ShoppingBagIcon size={18} color="white" />
+            <Ionicons name="basket" size={18} color="white" />
           </TouchableOpacity>
         </View>
       </View>
     </Animatable.View>
-  )
-}
+  );
+});
 
 const styles = StyleSheet.create({
   card: {
@@ -144,4 +181,6 @@ const styles = StyleSheet.create({
     elevation: 5,
   }
 });
+
+export default FoodCard;
 

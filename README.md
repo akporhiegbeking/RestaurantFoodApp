@@ -1,8 +1,8 @@
-# 🍽️ RestaurantFoodApp
+# 🍽️ LogisticMobileApp
 
-A premium, feature-rich food delivery application built with React Native and Expo, featuring a sleek modern design, real-time Firestore integration, and seamless payment processing.
+A premium Chowdeck/Glovo-style food delivery marketplace built with React Native and Expo, featuring a sleek modern design, real-time Firestore integration, and seamless payment processing.
 
-![RestaurantApp Banner](https://cdn.dribbble.com/userupload/6119574/file/original-5f38617e7b911320d197a5a681c881c9.png?compress=1&resize=2048x1536)
+![LogisticMobileApp Banner](https://cdn.dribbble.com/userupload/6119574/file/original-5f38617e7b911320d197a5a681c881c9.png?compress=1&resize=2048x1536)
 
 ---
 

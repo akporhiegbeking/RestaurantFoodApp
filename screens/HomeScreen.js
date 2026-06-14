@@ -7,7 +7,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  ShoppingBagIcon, MagnifyingGlassIcon, AdjustmentsHorizontalIcon, UserIcon,
+  ShoppingCartIcon, MagnifyingGlassIcon, AdjustmentsHorizontalIcon, UserIcon,
   DocumentTextIcon, ChevronRightIcon
 } from 'react-native-heroicons/outline';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -96,10 +96,15 @@ export default function HomeScreen() {
 
     // Real-time cart count listener
     if (auth.currentUser) {
-      const cartQuery = query(collection(db, 'cart'), where('uid', '==', auth.currentUser.uid));
+      const cartQuery = query(collection(db, 'carts'), where('userId', '==', auth.currentUser.uid));
       const unsubscribe = onSnapshot(cartQuery, (snapshot) => {
-        const activeItems = snapshot.docs.filter(doc => doc.data().orderStatus !== 'placed');
-        setCartCount(activeItems.length);
+        if (!snapshot.empty) {
+          const cartData = snapshot.docs[0].data();
+          const totalCount = (cartData.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
+          setCartCount(totalCount);
+        } else {
+          setCartCount(0);
+        }
       });
       return () => unsubscribe();
     }
@@ -116,7 +121,7 @@ export default function HomeScreen() {
 
       {/* Blurred Status Bar Background */}
       <Image
-        source={require('../assets/images/background.png')}
+        // source={require('../assets/images/')}
         placeholder={{ blurhash }}
         contentFit="cover"
         transition={1000}
@@ -124,10 +129,14 @@ export default function HomeScreen() {
         blurRadius={40}
       />
 
-      <LinearGradient
-        colors={['#FFD700', '#F59E0B', '#FFFFFF', '#001F33']}
-        locations={[0, 0.1, 0.3, 0.7]}
+      {/* Background Image */}
+      <Image
+        source={require('../assets/images/background.png')}
+        placeholder={{ blurhash }}
+        contentFit="cover"
+        transition={1000}
         style={{ position: 'absolute', width: '100%', height: '100%' }}
+        blurRadius={40}
       />
 
       <SafeAreaView style={{ flex: 1 }}>
@@ -178,17 +187,10 @@ export default function HomeScreen() {
                 {/* Icons Area (Right) */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
                   <TouchableOpacity
-                    onPress={() => navigation.navigate('OrdersList')}
-                    style={{ padding: 5 }}
-                  >
-                    <DocumentTextIcon size={32} color="white" />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
                     onPress={() => navigation.navigate('Cart')}
                     style={{ padding: 5 }}
                   >
-                    <ShoppingBagIcon size={32} color="white" />
+                    <ShoppingCartIcon size={32} color="white" />
                     {cartCount > 0 && (
                       <View style={{ position: 'absolute', right: -2, top: -2, backgroundColor: '#EF4444', borderRadius: 10, width: 22, height: 22, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'white' }}>
                         <Text style={{ color: 'white', fontSize: 10, fontWeight: '800' }}>{cartCount}</Text>
@@ -196,12 +198,6 @@ export default function HomeScreen() {
                     )}
                   </TouchableOpacity>
                 </View>
-              </View>
-
-              {/* Title */}
-              <View style={{ marginHorizontal: 20, marginTop: 30 }}>
-                <Text style={{ fontSize: 42, fontWeight: 'bold', color: '#1A1A1A', lineHeight: 50 }}>Fast and</Text>
-                <Text style={{ fontSize: 42, fontWeight: 'bold', color: '#1A1A1A', lineHeight: 50 }}>Delicious Food</Text>
               </View>
 
               {/* Search Bar */}
@@ -254,4 +250,3 @@ export default function HomeScreen() {
     </View>
   );
 }
-

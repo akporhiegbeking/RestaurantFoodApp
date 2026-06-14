@@ -2,8 +2,8 @@ import 'dotenv/config';
 
 export default {
   expo: {
-    name: "RestaurantFoodApp",
-    slug: "RestaurantFoodApp",
+    name: "LogisticMobileApp",
+    slug: "logistic-mobile-app",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
@@ -17,9 +17,11 @@ export default {
       "**/*"
     ],
     ios: {
-      supportsTablet: true
+      supportsTablet: true,
+      bundleIdentifier: "com.logisticmobile.app"
     },
     android: {
+      package: "com.logisticmobile.app",
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff"

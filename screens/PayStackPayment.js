@@ -5,11 +5,11 @@ import {
 } from 'react-native';
 import { usePaystack } from 'react-native-paystack-webview';
 import { useNavigation } from '@react-navigation/native';
-import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
-import { db } from '../constants/firebase';
+import { collection, addDoc, serverTimestamp, updateDoc, doc, getDoc, query, where, getDocs } from 'firebase/firestore';
+import { db, auth } from '../constants/firebase';
 import Toast from 'react-native-root-toast';
-import { StatusBar as RNStatusBar } from 'react-native';
-import { ChevronLeftIcon } from 'react-native-heroicons/solid';
+import { StatusBar as RNStatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PayStackPayment = ({ route }) => {
@@ -29,33 +29,47 @@ const PayStackPayment = ({ route }) => {
 
     setLoading(true);
     try {
+      const deliveryCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const orderNumber = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
+
       const orderData = {
+        orderNumber,
+        deliveryCode,
+        restaurantId: cartItems[0]?.restaurantId || '', // Simplified for first restaurant if mixed
+        restaurantName: cartItems[0]?.restaurantName || '',
         foodItems: cartItems,
-        totalPrice, // Original field
-        amountNGN, // New field from example logic
-        amountInKobo, // New field from example logic
-        user: userData,
+        subtotal: totalPrice,
+        deliveryFee: 500, // Mock delivery fee
+        totalAmount: totalPrice + 500,
+        customer: {
+          uid: auth.currentUser.uid,
+          fullName: userData.fullName,
+          email: userData.email,
+          phoneNumber: userData.phoneNumber,
+          address: userData.homeAddress || userData.home_address,
+        },
         paymentReference: reference,
-        paymentStatus: 'success',
-        status: 'pending',
+        paymentStatus: 'Paid',
+        orderStatus: 'Paid',
+        deliveryStatus: 'Pending',
         provider: "paystack",
         createdAt: serverTimestamp(),
-        reference, // New field from example logic
       };
 
       console.log('Saving order data:', orderData);
 
       const ordersCollection = collection(db, 'orders');
       await addDoc(ordersCollection, orderData);
-      console.log('Order saved successfully!');
 
-      // Mark items as placed in cart instead of deleting
-      for (const item of cartItems) {
-        try {
-          await updateDoc(doc(db, 'cart', item.id), { orderStatus: 'placed' });
-        } catch (err) {
-          console.error(`Error updating item ${item.id} in cart:`, err);
-        }
+      // Clear cart
+      const cartQuery = query(collection(db, 'carts'), where('userId', '==', auth.currentUser.uid));
+      const cartSnap = await getDocs(cartQuery);
+      if (!cartSnap.empty) {
+        const cartDoc = cartSnap.docs[0];
+        await updateDoc(doc(db, 'carts', cartDoc.id), {
+          items: [],
+          updatedAt: serverTimestamp()
+        });
       }
 
       setLoading(false);
@@ -104,7 +118,7 @@ const PayStackPayment = ({ route }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <RNStatusBar backgroundColor="#06191D" barStyle="light-content" />
+      <RNStatusBar style="light" />
 
       {/* Header with Back Button */}
       <View style={styles.header}>
@@ -112,7 +126,7 @@ const PayStackPayment = ({ route }) => {
           onPress={() => navigation.goBack()}
           style={styles.headerButton}
         >
-          <ChevronLeftIcon size="23" stroke={50} color="black" />
+          <Ionicons name="chevron-back" size={23} color="black" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Checkout</Text>
         <View style={{ width: 40 }} />

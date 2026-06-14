@@ -9,6 +9,7 @@ export default function App() {
   return (
     <PaystackProvider publicKey={process.env.EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY}>
       <GestureHandlerRootView style={{ flex: 1 }}>
+        <StatusBar style="auto" />
         <AppNavigation />
       </GestureHandlerRootView>
     </PaystackProvider>

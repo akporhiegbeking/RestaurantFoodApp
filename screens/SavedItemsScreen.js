@@ -8,7 +8,7 @@ import { auth, db } from '../constants/firebase';
 import { useNavigation } from '@react-navigation/native';
 import { collection, getDocs, query, where, deleteDoc, doc } from 'firebase/firestore';
 import Toast from 'react-native-root-toast';
-import { ChevronLeftIcon } from 'react-native-heroicons/solid';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
@@ -84,7 +84,7 @@ const SavedItemsScreen = () => {
 
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <ChevronLeftIcon size="23" stroke={50} color="white" />
+            <Ionicons name="chevron-back" size={23} color="white" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Saved Items</Text>
           <View style={styles.headerSpacer} />

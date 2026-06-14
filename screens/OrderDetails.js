@@ -1,449 +1,154 @@
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeftIcon } from 'react-native-heroicons/solid';
-import { Ionicons } from '@expo/vector-icons';
-import { StatusBar as RNStatusBar } from 'react-native';
+
+import {
+  ChevronLeftIcon,
+  PhoneIcon,
+  CheckIcon
+} from 'react-native-heroicons/solid';
+import { StatusBar } from 'expo-status-bar';
+import React, { useState, useEffect } from 'react';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../constants/firebase';
 
 const { width, height } = Dimensions.get('window');
-
 const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
 
 const OrderDetails = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { order } = route.params;
-  const [showTracking, setShowTracking] = useState(false);
+  const { order: initialOrder } = route.params;
+  const [order, setOrder] = useState(initialOrder);
+  const [loading, setLoading] = useState(false);
 
-  // Status mapping
-  const status = order.status || 'pending';
-  const isDelivered = status === 'delivered';
-  const isShipped = status === 'shipped';
-  const isPreparing = status === 'confirmed' || isShipped;
-  const isConfirmed = status === 'pending' || status === 'confirmed' || isShipped;
+  useEffect(() => {
+    // Real-time listener for current order
+    const unsub = onSnapshot(doc(db, 'orders', initialOrder.id), (docSnap) => {
+      if (docSnap.exists()) {
+        setOrder({ id: docSnap.id, ...docSnap.data() });
+      }
+    });
 
-  // Delivery code (Full doc ID)
-  const deliveryCode = order.orderId ? order.orderId.toUpperCase() : 'N/A';
+    return () => unsub();
+  }, [initialOrder.id]);
+
+  const statuses = [
+    'Pending Payment', 'Paid', 'Accepted', 'Preparing',
+    'Ready For Pickup', 'Picked Up', 'On The Way', 'Delivered'
+  ];
+
+  const currentStatusIndex = statuses.indexOf(order.orderStatus);
+
+  const getStatusDetails = (status) => {
+    switch (status) {
+      case 'Accepted': return { title: 'Order Accepted', desc: 'Restaurant is reviewing your order' };
+      case 'Preparing': return { title: 'Preparing Food', desc: 'Chef is making your delicious meal' };
+      case 'Ready For Pickup': return { title: 'Ready For Pickup', desc: 'Order is ready for the rider' };
+      case 'Picked Up': return { title: 'Picked Up', desc: 'Rider has collected your order' };
+      case 'On The Way': return { title: 'On The Way', desc: 'Rider is heading to your location' };
+      case 'Delivered': return { title: 'Delivered', desc: 'Enjoy your meal!' };
+      default: return { title: status, desc: '' };
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <RNStatusBar backgroundColor={showTracking ? "#15803D" : "#fff"} barStyle={showTracking ? "light-content" : "dark-content"} />
+    <SafeAreaView className="flex-1 bg-white">
+      <StatusBar style="dark" />
 
       {/* Header */}
-      <View style={[styles.header, showTracking && styles.trackingHeader]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-          <ChevronLeftIcon size="23" stroke={50} color={showTracking ? "white" : "black"} />
+      <View className="flex-row justify-between items-center px-5 py-4 border-b border-gray-50">
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          className="bg-gray-100 p-2 rounded-full"
+        >
+          <ChevronLeftIcon size={24} color="#1A1A1A" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, showTracking && styles.trackingHeaderTitle]}>
-          {showTracking ? "Track Order" : "Order Details"}
-        </Text>
-        <View style={{ width: 40 }} />
+        <Text className="text-xl font-bold text-gray-900">Track Order</Text>
+        <TouchableOpacity className="bg-gray-100 p-2 rounded-full">
+          <PhoneIcon size={20} color="#1A1A1A" />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {!showTracking ? (
-          <>
-            {/* Order Info Card */}
-            <View style={styles.itemCard}>
-              <Image
-                source={{ uri: order.imageUrl || 'https://via.placeholder.com/150' }}
-                placeholder={{ blurhash }}
-                contentFit="cover"
-                transition={1000}
-                style={styles.itemImage}
-              />
-              <View style={styles.itemDetails}>
-                <Text style={styles.itemName}>{order.name}</Text>
-                <Text style={styles.itemPrice}>₦{order.price}</Text>
-                <Text style={styles.itemQty}>Quantity: {order.quantity}</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* Verification Code Card */}
+        <View className="mx-5 mt-6 bg-orange-500 p-6 rounded-[32px] items-center shadow-lg shadow-orange-500/30">
+          <Text className="text-white/80 font-medium mb-2">Delivery Verification Code</Text>
+          <View className="flex-row gap-3">
+            {order.deliveryCode?.split('').map((char, i) => (
+              <View key={i} className="bg-white/20 w-12 h-16 rounded-2xl items-center justify-center border border-white/30">
+                <Text className="text-white text-2xl font-black">{char}</Text>
               </View>
-            </View>
-
-            <View style={styles.infoSection}>
-              <Text style={styles.sectionTitle}>Order Information</Text>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Order ID</Text>
-                <Text style={styles.detailValue}>#{order.orderId}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Payment Method</Text>
-                <Text style={styles.detailValue}>{order.paymentMethod || 'PayStack'}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Status</Text>
-                <Text style={[styles.statusText, { color: isDelivered ? '#22C55E' : '#EAB308' }]}>
-                  {status.toUpperCase()}
-                </Text>
-              </View>
-            </View>
-
-            {isDelivered && (
-              <View style={styles.arrivalBanner}>
-                <Ionicons name="checkmark-circle" size={24} color="#22C55E" />
-                <Text style={styles.arrivalText}>Order Arrived Successfully!</Text>
-              </View>
-            )}
-
-            {!isDelivered && (
-              <TouchableOpacity
-                style={styles.trackButton}
-                onPress={() => setShowTracking(true)}
-              >
-                <Text style={styles.trackButtonText}>Track Order</Text>
-              </TouchableOpacity>
-            )}
-          </>
-        ) : (
-          <View style={styles.trackingContainer}>
-            {/* Hero Section */}
-            <View style={styles.trackingHero}>
-              <Text style={styles.heroText}>From door to doorstep.</Text>
-              <Text style={styles.heroSubtext}>Track every order live.</Text>
-            </View>
-
-            {/* Tracking Card */}
-            <View style={styles.trackingCard}>
-              <View style={styles.handle} />
-
-              <Text style={styles.estTimeLabel}>Estimated time of delivery</Text>
-              <Text style={styles.estTimeValue}>10:00–10:30</Text>
-
-              <View style={styles.codeContainer}>
-                <Text style={styles.codeLabel}>Delivery code (i){'\n'}For the courier</Text>
-                <View style={styles.codeBoxes}>
-                  {deliveryCode.split('').map((char, i) => (
-                    <View key={i} style={styles.codeBox}>
-                      <Text style={styles.codeChar}>{char}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-
-              {/* Progress Steps */}
-              <View style={styles.stepsContainer}>
-                {/* Step 1 */}
-                <View style={styles.stepRow}>
-                  <View style={styles.stepIndicator}>
-                    <View style={[styles.dot, isConfirmed && styles.dotActive]}>
-                      {isConfirmed && <Ionicons name="checkmark" size={12} color="white" />}
-                    </View>
-                    <View style={[styles.line, isPreparing && styles.lineActive]} />
-                  </View>
-                  <Text style={[styles.stepText, isConfirmed && styles.stepTextActive]}>Confirming order</Text>
-                </View>
-
-                {/* Step 2 */}
-                <View style={styles.stepRow}>
-                  <View style={styles.stepIndicator}>
-                    <View style={[styles.dot, isPreparing && styles.dotActive]}>
-                      {isShipped && <Ionicons name="checkmark" size={12} color="white" />}
-                      {!isShipped && isPreparing && <View style={styles.innerDot} />}
-                    </View>
-                    <View style={[styles.line, isShipped && styles.lineActive]} />
-                  </View>
-                  <Text style={[styles.stepText, isPreparing && styles.stepTextActive]}>Preparing your order</Text>
-                </View>
-
-                {/* Step 3 */}
-                <View style={styles.stepRow}>
-                  <View style={styles.stepIndicator}>
-                    <View style={[styles.dot, isShipped && styles.dotActive]}>
-                      {isDelivered && <Ionicons name="checkmark" size={12} color="white" />}
-                      {!isDelivered && isShipped && <View style={styles.innerDot} />}
-                    </View>
-                  </View>
-                  <Text style={[styles.stepText, isShipped && styles.stepTextActive]}>Order shipped, Rider on the way</Text>
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={styles.closeTracking}
-                onPress={() => setShowTracking(false)}
-              >
-                <Text style={styles.closeTrackingText}>Hide Tracking</Text>
-              </TouchableOpacity>
-            </View>
+            )) || <Text className="text-white text-4xl font-black">----</Text>}
           </View>
-        )}
+          <Text className="text-white/80 text-xs mt-4 text-center">Give this code to the rider when your food arrives</Text>
+        </View>
+
+        {/* Restaurant Info */}
+        <View className="mx-5 mt-8 flex-row items-center bg-gray-50 p-4 rounded-3xl">
+          <Image
+            source={{ uri: order.foodItems?.[0]?.imageUrl }}
+            className="h-16 w-16 rounded-2xl"
+          />
+          <View className="ml-4 flex-1">
+            <Text className="text-lg font-bold text-gray-900">{order.restaurantName}</Text>
+            <Text className="text-gray-500 text-xs">Order #{order.orderNumber || order.id.substring(0, 6)}</Text>
+          </View>
+          <View className="items-end">
+            <Text className="text-gray-900 font-extrabold">₦{order.totalAmount.toLocaleString()}</Text>
+            <Text className="text-gray-500 text-xs">{order.foodItems?.length} items</Text>
+          </View>
+        </View>
+
+        {/* Timeline */}
+        <View className="mx-5 mt-10">
+          <Text className="text-xl font-bold text-gray-900 mb-6">Order Timeline</Text>
+
+          {statuses.slice(2).map((status, index) => {
+            const actualIndex = index + 2;
+            const isCompleted = actualIndex < currentStatusIndex;
+            const isCurrent = actualIndex === currentStatusIndex;
+            const details = getStatusDetails(status);
+
+            return (
+              <View key={status} className="flex-row">
+                <View className="items-center mr-4">
+                  <View className={`h-6 w-6 rounded-full items-center justify-center ${isCompleted ? 'bg-orange-500' : isCurrent ? 'bg-orange-500' : 'bg-gray-200'}`}>
+                    {isCompleted ? (
+                      <CheckIcon size={14} color="white" />
+                    ) : (
+                      <View className={`h-2 w-2 rounded-full ${isCurrent ? 'bg-white' : 'transparent'}`} />
+                    )}
+                  </View>
+                  {index < statuses.slice(2).length - 1 && (
+                    <View className={`w-0.5 h-12 ${actualIndex < currentStatusIndex ? 'bg-orange-500' : 'bg-gray-200'}`} />
+                  )}
+                </View>
+                <View className="pb-8">
+                  <Text className={`text-base font-bold ${isCurrent ? 'text-orange-500' : isCompleted ? 'text-gray-900' : 'text-gray-400'}`}>
+                    {details.title}
+                  </Text>
+                  <Text className="text-gray-500 text-xs mt-1">{details.desc}</Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
       </ScrollView>
+
+      {/* Cancel Order Button if still pending */}
+      {order.orderStatus === 'Pending Payment' && (
+        <View className="px-5 pb-6">
+          <TouchableOpacity className="bg-red-50 py-4 rounded-2xl items-center border border-red-100">
+            <Text className="text-red-500 font-bold">Cancel Order</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  trackingHeader: {
-    backgroundColor: '#15803D',
-  },
-  headerButton: {
-    padding: 5,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: 'black',
-  },
-  trackingHeaderTitle: {
-    color: 'white',
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  itemCard: {
-    flexDirection: 'row',
-    margin: 20,
-    padding: 15,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 20,
-    alignItems: 'center',
-  },
-  itemImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 15,
-  },
-  itemDetails: {
-    marginLeft: 15,
-    flex: 1,
-  },
-  itemName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  itemPrice: {
-    fontSize: 16,
-    color: '#22C55E',
-    fontWeight: '700',
-    marginTop: 4,
-  },
-  itemQty: {
-    fontSize: 14,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  infoSection: {
-    paddingHorizontal: 20,
-    marginTop: 10,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#94A3B8',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 15,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  detailLabel: {
-    fontSize: 15,
-    color: '#64748B',
-  },
-  detailValue: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  statusText: {
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  trackButton: {
-    backgroundColor: '#0F172A',
-    margin: 20,
-    paddingVertical: 18,
-    borderRadius: 20,
-    alignItems: 'center',
-    marginTop: 40,
-  },
-  trackButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  arrivalBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0FDF4',
-    margin: 20,
-    padding: 15,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: '#DCFCE7',
-  },
-  arrivalText: {
-    marginLeft: 10,
-    fontSize: 16,
-    color: '#15803D',
-    fontWeight: '700',
-  },
-  trackingContainer: {
-    backgroundColor: '#15803D',
-    minHeight: height,
-  },
-  trackingHero: {
-    padding: 30,
-    paddingTop: 10,
-  },
-  heroText: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: 'white',
-    lineHeight: 40,
-  },
-  heroSubtext: {
-    fontSize: 18,
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: 10,
-  },
-  trackingCard: {
-    flex: 1,
-    backgroundColor: 'white',
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    padding: 30,
-    marginTop: 20,
-  },
-  handle: {
-    width: 40,
-    height: 5,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 5,
-    alignSelf: 'center',
-    marginBottom: 30,
-  },
-  estTimeLabel: {
-    textAlign: 'center',
-    fontSize: 14,
-    color: '#94A3B8',
-    fontWeight: '600',
-  },
-  estTimeValue: {
-    textAlign: 'center',
-    fontSize: 36,
-    fontWeight: '900',
-    color: '#0F172A',
-    marginVertical: 10,
-  },
-  codeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    padding: 15,
-    borderRadius: 20,
-    marginTop: 20,
-  },
-  codeLabel: {
-    fontSize: 12,
-    color: '#64748B',
-    lineHeight: 18,
-    marginRight: 10,
-  },
-  codeBoxes: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end',
-    flex: 1,
-    gap: 5,
-  },
-  codeBox: {
-    width: 32,
-    height: 32,
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  codeChar: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  stepsContainer: {
-    marginTop: 40,
-  },
-  stepRow: {
-    flexDirection: 'row',
-    height: 80,
-  },
-  stepIndicator: {
-    width: 40,
-    alignItems: 'center',
-  },
-  dot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 2,
-  },
-  dotActive: {
-    backgroundColor: '#22C55E',
-  },
-  innerDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#22C55E',
-  },
-  line: {
-    width: 2,
-    height: 60,
-    backgroundColor: '#F1F5F9',
-    position: 'absolute',
-    top: 24,
-    zIndex: 1,
-  },
-  lineActive: {
-    backgroundColor: '#22C55E',
-  },
-  stepText: {
-    fontSize: 16,
-    color: '#94A3B8',
-    fontWeight: '600',
-    marginLeft: 15,
-    top: 2,
-  },
-  stepTextActive: {
-    color: '#0F172A',
-    fontWeight: '700',
-  },
-  closeTracking: {
-    marginTop: 20,
-    alignItems: 'center',
-    padding: 10,
-  },
-  closeTrackingText: {
-    color: '#64748B',
-    fontWeight: '600',
-  }
-});
 
 export default OrderDetails;

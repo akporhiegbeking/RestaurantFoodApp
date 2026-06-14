@@ -1,32 +1,36 @@
 import React, { useState } from 'react';
-import { 
-  View, Text, TouchableOpacity, Image, TextInput, 
+import {
+  View, Text, TouchableOpacity, TextInput,
   StyleSheet, Dimensions, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, 
-  ChevronLeftIcon 
+import {
+  ChevronLeftIcon,
+  EnvelopeIcon,
+  LockClosedIcon,
+  EyeIcon,
+  EyeSlashIcon
 } from 'react-native-heroicons/outline';
-import * as IconsSolid from 'react-native-heroicons/solid';
-import { FontAwesome } from '@expo/vector-icons';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../constants/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
+const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
+
 const GridBackground = () => (
-    <View style={styles.gridContainer}>
-      {[...Array(20)].map((_, i) => (
-        <View key={`v-${i}`} style={[styles.gridLineV, { left: (width / 10) * i }]} />
-      ))}
-      {[...Array(20)].map((_, i) => (
-        <View key={`h-${i}`} style={[styles.gridLineH, { top: (height / 20) * i }]} />
-      ))}
-    </View>
+  <View style={styles.gridContainer}>
+    {[...Array(20)].map((_, i) => (
+      <View key={`v-${i}`} style={[styles.gridLineV, { left: (width / 10) * i }]} />
+    ))}
+    {[...Array(20)].map((_, i) => (
+      <View key={`h-${i}`} style={[styles.gridLineH, { top: (height / 20) * i }]} />
+    ))}
+  </View>
 );
 
 export default function LoginScreen() {
@@ -44,7 +48,7 @@ export default function LoginScreen() {
         await signInWithEmailAndPassword(auth, email, password);
         await AsyncStorage.setItem('isLoggedIn', 'true');
         setIsLoading(false);
-        navigation.navigate('Home');
+        navigation.navigate('MainTabs');
       } catch (err) {
         setIsLoading(false);
         alert('Invalid Login credentials');
@@ -63,29 +67,31 @@ export default function LoginScreen() {
       <GridBackground />
 
       <SafeAreaView style={{ flex: 1 }}>
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
         >
           <ScrollView contentContainerStyle={{ flexGrow: 1 }} bounces={false}>
             {/* Header section */}
             <View style={styles.header}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => navigation.goBack()}
                 style={styles.backButton}
               >
                 <ChevronLeftIcon size={24} color="white" />
               </TouchableOpacity>
-              
+
               <View style={styles.logoContainer}>
-                <Image 
-                  source={require('../assets/images/welcome.png')} 
+                <ExpoImage
+                  source={require('../assets/images/welcome.png')}
                   style={styles.logo}
-                  resizeMode="contain"
+                  contentFit="contain"
+                  placeholder={{ blurhash }}
+                  transition={1000}
                 />
               </View>
 
-              <Text style={styles.welcomeTitle}>Welcome Back !</Text>              
+              <Text style={styles.welcomeTitle}>Welcome Back !</Text>
             </View>
 
             {/* Form section */}
@@ -128,9 +134,9 @@ export default function LoginScreen() {
               </View>
 
               <View style={styles.row}>
-                <TouchableOpacity 
-                    style={styles.rememberRow}
-                    onPress={() => setRememberMe(!rememberMe)}
+                <TouchableOpacity
+                  style={styles.rememberRow}
+                  onPress={() => setRememberMe(!rememberMe)}
                 >
                   <View style={[styles.checkbox, rememberMe && styles.checkboxActive]} />
                   <Text style={styles.rememberText}>Remember me</Text>
@@ -140,7 +146,7 @@ export default function LoginScreen() {
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.loginButton}
                 onPress={handleSubmit}
                 disabled={isLoading}

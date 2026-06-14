@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
-import { 
-  View, Text, TouchableOpacity, Image, TextInput, 
+import {
+  View, Text, TouchableOpacity, TextInput,
   StyleSheet, Dimensions, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Alert
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  UserIcon, EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, 
-  ChevronLeftIcon 
+import {
+  ChevronLeftIcon,
+  UserIcon,
+  EnvelopeIcon,
+  LockClosedIcon,
+  EyeIcon,
+  EyeSlashIcon
 } from 'react-native-heroicons/outline';
-import { FontAwesome } from '@expo/vector-icons';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '../constants/firebase';
@@ -19,15 +23,17 @@ import * as Device from 'expo-device';
 
 const { width, height } = Dimensions.get('window');
 
+const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
+
 const GridBackground = () => (
-    <View style={styles.gridContainer}>
-      {[...Array(20)].map((_, i) => (
-        <View key={`v-${i}`} style={[styles.gridLineV, { left: (width / 10) * i }]} />
-      ))}
-      {[...Array(20)].map((_, i) => (
-        <View key={`h-${i}`} style={[styles.gridLineH, { top: (height / 20) * i }]} />
-      ))}
-    </View>
+  <View style={styles.gridContainer}>
+    {[...Array(20)].map((_, i) => (
+      <View key={`v-${i}`} style={[styles.gridLineV, { left: (width / 10) * i }]} />
+    ))}
+    {[...Array(20)].map((_, i) => (
+      <View key={`h-${i}`} style={[styles.gridLineH, { top: (height / 20) * i }]} />
+    ))}
+  </View>
 );
 
 export default function SignUpScreen() {
@@ -40,8 +46,8 @@ export default function SignUpScreen() {
   const [agreeToTerms, setAgreeToTerms] = useState(false);
 
   const validateEmail = (email) => {
-      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      return re.test(email);
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
   };
 
   const handleSubmit = async () => {
@@ -57,63 +63,63 @@ export default function SignUpScreen() {
 
       try {
         setIsLoading(true);
-        
+
         // Check if email already exists
         const emailQuery = query(collection(db, 'users'), where('email', '==', email));
         const emailQuerySnapshot = await getDocs(emailQuery);
 
         if (!emailQuerySnapshot.empty) {
-            setIsLoading(false);
-            Toast.show('Email already exists', { duration: Toast.durations.SHORT });
-            return;
+          setIsLoading(false);
+          Toast.show('Email already exists', { duration: Toast.durations.SHORT });
+          return;
         }
 
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
         if (user) {
-            // Get user count for image rotation
-            const userQuery = query(collection(db, 'users'));
-            const snapshot = await getDocs(userQuery);
-            const userCount = snapshot.size;
+          // Get user count for image rotation
+          const userQuery = query(collection(db, 'users'));
+          const snapshot = await getDocs(userQuery);
+          const userCount = snapshot.size;
 
-            const bskyUrl = "https://cdn.bsky.app/img/avatar/plain/did:plc:tn7tnmk654ejtpeoamr5orz6/bafkreiauu7kymx2sxctfzmfy53ge3wu5mfk56amnz7mensw5ypf7c2btba";
-            const dicebearUrl = `https://api.dicebear.com/6.x/pixel-art/png?seed=${encodeURIComponent(fullName)}`;
-            const imageUrl = userCount % 2 === 0 ? bskyUrl : dicebearUrl;
+          const bskyUrl = "https://cdn.bsky.app/img/avatar/plain/did:plc:tn7tnmk654ejtpeoamr5orz6/bafkreiauu7kymx2sxctfzmfy53ge3wu5mfk56amnz7mensw5ypf7c2btba";
+          const dicebearUrl = `https://api.dicebear.com/6.x/pixel-art/png?seed=${encodeURIComponent(fullName)}`;
+          const imageUrl = userCount % 2 === 0 ? bskyUrl : dicebearUrl;
 
-            // Get Location via ipinfo (fallback suggested)
-            let locationStr = 'Unknown Location';
-            try {
-                const locResponse = await fetch('https://ipinfo.io?token=90883ca1824185');
-                const locData = await locResponse.json();
-                if (locData.city) {
-                    locationStr = `${locData.city}, ${locData.region || ''}, ${locData.country || ''}`;
-                }
-            } catch (e) {
-                console.warn('Location fetch failed:', e);
+          // Get Location via ipinfo (fallback suggested)
+          let locationStr = 'Unknown Location';
+          try {
+            const locResponse = await fetch('https://ipinfo.io?token=90883ca1824185');
+            const locData = await locResponse.json();
+            if (locData.city) {
+              locationStr = `${locData.city}, ${locData.region || ''}, ${locData.country || ''}`;
             }
+          } catch (e) {
+            console.warn('Location fetch failed:', e);
+          }
 
-            // Get Device Info
-            const deviceInfo = {
-                brand: Device.brand,
-                modelName: Device.modelName,
-                osName: Device.osName,
-                osVersion: Device.osVersion,
-                deviceName: Device.deviceName,
-            };
+          // Get Device Info
+          const deviceInfo = {
+            brand: Device.brand,
+            modelName: Device.modelName,
+            osName: Device.osName,
+            osVersion: Device.osVersion,
+            deviceName: Device.deviceName,
+          };
 
-            await addDoc(collection(db, 'users'), {
-                uid: user.uid,
-                fullName: fullName,
-                email: email,
-                imageUrl: imageUrl,
-                phoneNumber: '', 
-                home_address: locationStr, // Populated from API
-                deviceInfo: deviceInfo, // New field
-                createdAt: new Date().toISOString()
-            });
-            setIsLoading(false);
-            navigation.navigate('Home');
+          await addDoc(collection(db, 'users'), {
+            uid: user.uid,
+            fullName: fullName,
+            email: email,
+            imageUrl: imageUrl,
+            phoneNumber: '',
+            home_address: locationStr, // Populated from API
+            deviceInfo: deviceInfo, // New field
+            createdAt: new Date().toISOString()
+          });
+          setIsLoading(false);
+          navigation.navigate('MainTabs');
         }
       } catch (err) {
         setIsLoading(false);
@@ -135,29 +141,26 @@ export default function SignUpScreen() {
       <GridBackground />
 
       <SafeAreaView style={{ flex: 1 }}>
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
         >
           <ScrollView contentContainerStyle={{ flexGrow: 1 }} bounces={false} showsVerticalScrollIndicator={false}>
             {/* Header section */}
             <View style={styles.header}>
-              <TouchableOpacity 
-                onPress={() => navigation.goBack()}
-                style={styles.backButton}
-              >
-                <ChevronLeftIcon size={24} color="white" />
-              </TouchableOpacity>
-              
+              <ChevronLeftIcon size={24} color="white" />
+
               <View style={styles.logoContainer}>
-                <Image 
-                  source={require('../assets/images/signup.png')} 
+                <ExpoImage
+                  source={require('../assets/images/signup.png')}
                   style={styles.logo}
-                  resizeMode="contain"
+                  contentFit="contain"
+                  placeholder={{ blurhash }}
+                  transition={1000}
                 />
               </View>
 
-              <Text style={styles.title}>Create Account</Text>             
+              <Text style={styles.title}>Create Account</Text>
             </View>
 
             {/* Form section */}
@@ -214,9 +217,9 @@ export default function SignUpScreen() {
               </View>
 
               <View style={styles.row}>
-                <TouchableOpacity 
-                    style={styles.checkboxRow}
-                    onPress={() => setAgreeToTerms(!agreeToTerms)}
+                <TouchableOpacity
+                  style={styles.checkboxRow}
+                  onPress={() => setAgreeToTerms(!agreeToTerms)}
                 >
                   <View style={[styles.checkbox, agreeToTerms && styles.checkboxActive]} />
                   <Text style={styles.checkboxText}>
@@ -225,7 +228,7 @@ export default function SignUpScreen() {
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.submitButton}
                 onPress={handleSubmit}
                 disabled={isLoading}

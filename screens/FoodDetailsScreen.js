@@ -1,28 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Text, TouchableOpacity, ActivityIndicator,
-    ScrollView,
+    ScrollView, StyleSheet, Dimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
-import {
-    MinusIcon, PlusIcon, FireIcon, ClockIcon, StarIcon,
-    RectangleStackIcon, ShoppingBagIcon
-} from 'react-native-heroicons/outline';
-import { ChevronLeftIcon } from 'react-native-heroicons/solid';
-import { Ionicons } from '@expo/vector-icons';
-const HeartIconSolid = (props) => <Ionicons name="heart" {...props} />;
-const HeartIconOutline = (props) => <Ionicons name="heart-outline" {...props} />;
-import { useNavigation } from '@react-navigation/native';
 import * as Animatable from 'react-native-animatable';
+import { useNavigation } from '@react-navigation/native';
+import {
+    HeartIcon as HeartIconSolid,
+    ChevronLeftIcon, MinusIcon, PlusIcon,
+} from 'react-native-heroicons/solid';
+import {
+    HeartIcon as HeartIconOutline,
+} from 'react-native-heroicons/outline';
 import { auth, db } from '../constants/firebase';
 import {
-    collection, getDocs, addDoc, query, where, deleteDoc, doc, updateDoc,
-    onSnapshot
+    doc, getDoc, setDoc, updateDoc, onSnapshot, serverTimestamp,
+    collection, query, where, getDocs, deleteDoc, addDoc
 } from 'firebase/firestore';
 import Toast from 'react-native-root-toast';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+
+const { width, height } = Dimensions.get('window');
 
 const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
 
@@ -33,372 +33,410 @@ export default function FoodDetailsScreen(props) {
     const [added, setAdded] = useState(false);
     const [liked, setLiked] = useState(false);
     const [quantity, setQuantity] = useState(1);
-    const [cartItemId, setCartItemId] = useState(null);
     const [foodData, setFoodData] = useState(item);
 
     useEffect(() => {
-        const initializeQuantityAndCartStatus = async () => {
-            try {
-                // 1. Check Firestore for existing cart item
-                const cartItemsQuery = query(
-                    collection(db, 'cart'),
-                    where('uid', '==', auth.currentUser.uid),
-                    where('food_id', '==', item.id)
-                );
-                const querySnapshot = await getDocs(cartItemsQuery);
-
-                if (!querySnapshot.empty) {
-                    // Item is in cart
-                    const cartDoc = querySnapshot.docs[0];
-                    const cartData = cartDoc.data();
+        if (!auth.currentUser) return;
+        const cartQuery = query(collection(db, 'carts'), where('userId', '==', auth.currentUser.uid));
+        const unsubCart = onSnapshot(cartQuery, (snapshot) => {
+            if (!snapshot.empty) {
+                const cartDoc = snapshot.docs[0];
+                const cartData = cartDoc.data();
+                const existingItem = cartData.items.find(i => i.foodId === item.id);
+                if (existingItem) {
                     setAdded(true);
-                    setCartItemId(cartDoc.id);
-                    setQuantity(cartData.quantity || 1);
+                    setQuantity(existingItem.quantity);
                 } else {
-                    // Item not in cart, default to 1
                     setAdded(false);
-                    setQuantity(1);
                 }
-
-                // 2. Refresh the overall "addedItems" list for the Home Screen badge logic
-                const addedItems = await AsyncStorage.getItem('addedItems');
-                let parsedItems = addedItems !== null ? JSON.parse(addedItems) : [];
-                if (!querySnapshot.empty && !parsedItems.includes(item.id)) {
-                    parsedItems.push(item.id);
-                    await AsyncStorage.setItem('addedItems', JSON.stringify(parsedItems));
-                } else if (querySnapshot.empty && parsedItems.includes(item.id)) {
-                    parsedItems = parsedItems.filter(id => id !== item.id);
-                    await AsyncStorage.setItem('addedItems', JSON.stringify(parsedItems));
-                }
-
-            } catch (error) {
-                console.error('Error initializing quantity: ', error);
+            } else {
+                setAdded(false);
             }
-        };
+        });
 
         const checkIfLiked = async () => {
             try {
-                const savedItemsQuery = query(
+                const savedQuery = query(
                     collection(db, 'saved_items'),
                     where('uid', '==', auth.currentUser.uid),
                     where('food_id', '==', item.id)
                 );
-                const querySnapshot = await getDocs(savedItemsQuery);
-                if (!querySnapshot.empty) {
-                    setLiked(true);
-                }
-            } catch (error) {
-                console.error('Error checking if item is liked: ', error);
-            }
+                const snapshot = await getDocs(savedQuery);
+                if (!snapshot.empty) setLiked(true);
+            } catch (err) { console.error(err); }
         };
-
-        initializeQuantityAndCartStatus();
         checkIfLiked();
 
-        // 3. Real-time listener for food availability and updates
-        const foodDocRef = doc(db, 'foods', item.id);
-        const unsubscribe = onSnapshot(foodDocRef, (doc) => {
-            if (doc.exists()) {
-                setFoodData({ id: doc.id, ...doc.data() });
-            }
-        }, (error) => {
-            console.error("Error listening to food updates: ", error);
+        const foodRef = doc(db, 'foods', item.id);
+        const unsubFood = onSnapshot(foodRef, (docSnap) => {
+            if (docSnap.exists()) setFoodData({ id: docSnap.id, ...docSnap.data() });
         });
 
-        return () => unsubscribe();
+        return () => {
+            unsubCart();
+            unsubFood();
+        };
     }, []);
 
-    const syncQuantity = async (newQuantity) => {
-        setQuantity(newQuantity);
-        try {
-            // If already in cart, update Firestore
-            if (added && cartItemId) {
-                const cartDocRef = doc(db, 'cart', cartItemId);
-                await updateDoc(cartDocRef, { quantity: newQuantity });
-            }
-        } catch (error) {
-            console.error('Error syncing quantity: ', error);
-        }
-    };
-
-    const handleAddToCart = async () => {
+    const handleAddToCart = async (newQty = quantity) => {
+        if (!auth.currentUser) return;
         setLoading(true);
         try {
-            const docRef = await addDoc(collection(db, 'cart'), {
-                uid: auth.currentUser.uid,
-                food_id: item.id,
-                quantity: quantity,
-                price: item.price,
-                name: item.name,
-                imageUrl: item.imageUrl,
-            });
-            Toast.show('Item added to cart!', {
-                duration: Toast.durations.SHORT,
-                position: Toast.positions.BOTTOM,
-            });
+            const cartQuery = query(collection(db, 'carts'), where('userId', '==', auth.currentUser.uid));
+            const cartSnap = await getDocs(cartQuery);
 
-            setAdded(true);
-            setCartItemId(docRef.id);
-            const addedItems = await AsyncStorage.getItem('addedItems');
-            const parsedItems = addedItems !== null ? JSON.parse(addedItems) : [];
-            if (!parsedItems.includes(item.id)) {
-                parsedItems.push(item.id);
-                await AsyncStorage.setItem('addedItems', JSON.stringify(parsedItems));
+            const newItem = {
+                foodId: item.id || '',
+                merchantId: item.merchantId || item.restaurantId || foodData.merchantId || foodData.restaurantId || '',
+                merchantName: item.merchantName || item.restaurantName || foodData.merchantName || foodData.restaurantName || '',
+                name: item.name || '',
+                imageUrl: item.imageUrl || '',
+                price: item.price || 0,
+                quantity: newQty,
+            };
+
+            if (!cartSnap.empty) {
+                const cartDoc = cartSnap.docs[0];
+                const cartRef = doc(db, 'carts', cartDoc.id);
+                let items = cartDoc.data().items || [];
+                const idx = items.findIndex(i => i.foodId === item.id);
+                if (idx > -1) {
+                    items[idx].quantity = newQty;
+                } else {
+                    items.push(newItem);
+                }
+                await updateDoc(cartRef, { items, updatedAt: serverTimestamp() });
+            } else {
+                await addDoc(collection(db, 'carts'), {
+                    items: [newItem],
+                    userId: auth.currentUser.uid,
+                    updatedAt: serverTimestamp()
+                });
             }
-        } catch (error) {
-            console.error('Error adding item to cart: ', error);
+            Toast.show('Cart updated!');
+            setAdded(true);
+        } catch (err) {
+            console.error(err);
         } finally {
             setLoading(false);
         }
     };
 
     const handleRemoveFromCart = async () => {
+        if (!auth.currentUser) return;
         setLoading(true);
         try {
-            if (cartItemId) {
-                await deleteDoc(doc(db, 'cart', cartItemId));
-            } else {
-                const cartItemsQuery = query(
-                    collection(db, 'cart'),
-                    where('uid', '==', auth.currentUser.uid),
-                    where('food_id', '==', item.id)
-                );
-                const cartItemsSnapshot = await getDocs(cartItemsQuery);
-                cartItemsSnapshot.forEach(async (docSnapshot) => {
-                    await deleteDoc(doc(db, 'cart', docSnapshot.id));
-                });
+            const cartQuery = query(collection(db, 'carts'), where('userId', '==', auth.currentUser.uid));
+            const cartSnap = await getDocs(cartQuery);
+            if (!cartSnap.empty) {
+                const cartDoc = cartSnap.docs[0];
+                const items = cartDoc.data().items.filter(i => i.foodId !== item.id);
+                await updateDoc(doc(db, 'carts', cartDoc.id), { items, updatedAt: serverTimestamp() });
+                setAdded(false);
+                setQuantity(1);
+                Toast.show('Removed from cart');
             }
-
-            Toast.show('Item removed from cart!', {
-                duration: Toast.durations.SHORT,
-                position: Toast.positions.BOTTOM,
-            });
-
-            setAdded(false);
-            setCartItemId(null);
-            const addedItems = await AsyncStorage.getItem('addedItems');
-            let parsedItems = addedItems !== null ? JSON.parse(addedItems) : [];
-            parsedItems = parsedItems.filter(id => id !== item.id);
-            await AsyncStorage.setItem('addedItems', JSON.stringify(parsedItems));
-        } catch (error) {
-            console.error('Error removing item from cart: ', error);
-        } finally {
-            setLoading(false);
-        }
+        } catch (err) { console.error(err); }
+        finally { setLoading(false); }
     };
 
     const handleSaveItem = async () => {
-        if (liked) {
-            try {
-                const savedItemsQuery = query(
+        if (!auth.currentUser) return;
+        try {
+            if (liked) {
+                const savedQuery = query(
                     collection(db, 'saved_items'),
                     where('uid', '==', auth.currentUser.uid),
                     where('food_id', '==', item.id)
                 );
-                const savedItemsSnapshot = await getDocs(savedItemsQuery);
-                savedItemsSnapshot.forEach(async (docSnapshot) => {
-                    await deleteDoc(doc(db, 'saved_items', docSnapshot.id));
-                });
+                const snapshot = await getDocs(savedQuery);
+                snapshot.forEach(async (d) => await deleteDoc(doc(db, 'saved_items', d.id)));
                 setLiked(false);
-                Toast.show('Item removed from saved!', {
-                    duration: Toast.durations.SHORT,
-                    position: Toast.positions.BOTTOM,
-                });
-            } catch (error) {
-                console.error('Error removing item from saved: ', error);
-            }
-        } else {
-            try {
-                await addDoc(collection(db, 'saved_items'), {
+                Toast.show('Removed from saved');
+            } else {
+                await setDoc(doc(collection(db, 'saved_items')), {
                     uid: auth.currentUser.uid,
                     food_id: item.id,
-                    quantity: 1,
-                    price: item.price,
-                    name: item.name,
-                    imageUrl: item.imageUrl,
+                    savedAt: serverTimestamp(),
                 });
                 setLiked(true);
-                Toast.show('Item saved!', {
-                    duration: Toast.durations.SHORT,
-                    position: Toast.positions.BOTTOM,
-                });
-            } catch (error) {
-                console.error('Error saving item: ', error);
+                Toast.show('Saved!');
             }
-        }
+        } catch (err) { console.error(err); }
     };
 
+    // Removed calories, prepTime, rating, weight as per user request
+
     return (
-        <View style={{ flex: 1, backgroundColor: 'white' }}>
+        <View style={styles.container}>
             <StatusBar style="light" translucent backgroundColor="transparent" />
-            {/* Blurred Background Header */}
+
+            {/* Blurred background image */}
             <Image
-                style={{ borderBottomLeftRadius: 50, borderBottomRightRadius: 50, height: 420, width: '100%', position: 'absolute', top: 0 }}
                 source={require('../assets/images/background.png')}
-                placeholder={{ blurhash }}
+                style={styles.heroBg}
                 contentFit="cover"
-                transition={1000}
                 blurRadius={40}
             />
 
             <SafeAreaView style={{ flex: 1 }}>
-                {/* Header Controls */}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: 20, alignItems: 'center', marginTop: 10 }}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-                        <ChevronLeftIcon size="23" stroke={50} color="white" />
+                {/* Top nav */}
+                <View style={styles.topNav}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                        <ChevronLeftIcon size={22} color="#1a2a4a" />
                     </TouchableOpacity>
-
-                    <TouchableOpacity
-                        onPress={handleSaveItem}
-                        style={{ backgroundColor: 'white', padding: 12, borderRadius: 20, shadowColor: '#000', shadowOpacity: 0.1, elevation: 5 }}
-                    >
-                        {liked ? (
-                            <HeartIconSolid size={24} color="red" />
-                        ) : (
-                            <HeartIconOutline size={24} color="black" />
-                        )}
+                    <TouchableOpacity onPress={handleSaveItem} style={styles.heartBtn}>
+                        {liked
+                            ? <HeartIconSolid size={22} color="#ef4444" />
+                            : <HeartIconOutline size={22} color="#374151" />
+                        }
                     </TouchableOpacity>
                 </View>
 
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
-                    {/* Food Image and Title */}
-                    <View style={{ alignItems: 'center', marginTop: 20 }}>
-                        <Image
-                            source={{ uri: item.imageUrl }}
-                            placeholder={{ blurhash }}
-                            contentFit="contain"
-                            transition={1000}
-                            style={{ height: 200, width: 200 }}
-                        />
-                        <Animatable.Text
-                            animation="fadeInUp"
-                            style={{ fontSize: 32, fontWeight: '800', color: 'white', marginTop: 10, textAlign: 'center', textShadowColor: 'rgba(0,0,0,0.2)', textShadowRadius: 10 }}
-                        >
-                            {item.name}
-                        </Animatable.Text>
-
-                        {/* Availability Status */}
-                        <Animatable.View
-                            animation="fadeInUp"
-                            delay={400}
-                            style={{
-                                marginTop: 8,
-                                paddingHorizontal: 12,
-                                paddingVertical: 6,
-                                borderRadius: 15,
-                                backgroundColor: foodData.isAvailable !== false ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                                borderWidth: 1,
-                                borderColor: foodData.isAvailable !== false ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'
-                            }}
-                        >
-                            <Text style={{
-                                fontSize: 13,
-                                fontWeight: 'bold',
-                                color: foodData.isAvailable !== false ? '#22C55E' : '#EF4444',
-                                letterSpacing: 0.5
-                            }}>
-                                {foodData.isAvailable !== false ? 'Currently Available' : 'Unavailable/ Out of stock'}
-                            </Text>
-                        </Animatable.View>
-                    </View>
-
-                    {/* Quantity Stepper */}
-                    <Animatable.View
-                        animation="fadeInUp"
-                        delay={300}
-                        style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 25, padding: 4, marginTop: 20, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 }}
-                    >
-                        <TouchableOpacity
-                            onPress={() => syncQuantity(Math.max(1, quantity - 1))}
-                            style={{ backgroundColor: '#F3F4F6', padding: 12, borderRadius: 20 }}
-                        >
-                            <MinusIcon size={20} color="black" />
-                        </TouchableOpacity>
-                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginHorizontal: 20 }}>{quantity}</Text>
-                        <TouchableOpacity
-                            onPress={() => syncQuantity(quantity + 1)}
-                            style={{ backgroundColor: '#F3F4F6', padding: 12, borderRadius: 20 }}
-                        >
-                            <PlusIcon size={20} color="black" />
-                        </TouchableOpacity>
-                    </Animatable.View>
-
-                    {/* Description Section */}
-                    <View style={{ paddingHorizontal: 20, marginTop: 35 }}>
-                        <Animatable.Text
-                            animation="fadeInUp"
-                            delay={600}
-                            style={{ fontSize: 24, fontWeight: 'bold', color: '#1F2937' }}
-                        >
-                            Description
-                        </Animatable.Text>
-                        <Animatable.Text
-                            animation="fadeInUp"
-                            delay={700}
-                            style={{ fontSize: 15, color: '#6B7280', marginTop: 12, lineHeight: 24, letterSpacing: 0.3 }}
-                        >
-                            {item.description || "Indulge in our chef's special creation, prepared with the freshest ingredients and authentic spices to bring you a truly remarkable dining experience."}
-                        </Animatable.Text>
-                    </View>
-                </ScrollView>
-
-                {/* Footer Section */}
-                <Animatable.View
-                    animation="fadeInUp"
-                    delay={800}
-                    style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        paddingHorizontal: 20,
-                        paddingVertical: 20,
-                        backgroundColor: 'white',
-                        borderTopLeftRadius: 40,
-                        borderTopRightRadius: 40,
-                        shadowColor: '#000',
-                        shadowOpacity: 0.1,
-                        shadowRadius: 20,
-                        elevation: 15
-                    }}
-                >
-                    <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#111827' }}>
-                            ₦ {item.price.toLocaleString()} ({quantity})
-                        </Text>
-                        <Text style={{ fontSize: 14, color: '#9CA3AF', fontWeight: '500', marginTop: 4 }}>
-                            ~ ₦ {(item.price * quantity).toLocaleString()}
-                        </Text>
-                    </View>
-
-                    <TouchableOpacity
-                        onPress={added ? handleRemoveFromCart : handleAddToCart}
-                        disabled={loading || foodData.isAvailable === false}
-                        style={{
-                            backgroundColor: foodData.isAvailable === false ? '#9CA3AF' : (added ? '#EF4444' : '#001F33'),
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            paddingHorizontal: 30,
-                            paddingVertical: 18,
-                            borderRadius: 25,
-                            shadowColor: foodData.isAvailable === false ? '#9CA3AF' : (added ? '#EF4444' : '#001F33'),
-                            shadowOpacity: 0.3,
-                            shadowRadius: 10,
-                            elevation: 5
-                        }}
-                    >
-                        {loading ? (
-                            <ActivityIndicator color="white" />
-                        ) : (
-                            <>
-                                <ShoppingBagIcon size={20} color="white" />
-                                <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold', marginLeft: 8 }}>
-                                    {foodData.isAvailable === false ? 'Out of stock' : (added ? 'Remove' : 'Add to Cart')}
-                                </Text>
-                            </>
-                        )}
-                    </TouchableOpacity>
+                {/* Food image */}
+                <Animatable.View animation="fadeInDown" duration={700} style={styles.imageWrapper}>
+                    <Image
+                        source={{ uri: item.imageUrl }}
+                        placeholder={{ blurhash }}
+                        contentFit="contain"
+                        transition={800}
+                        style={styles.foodImage}
+                    />
                 </Animatable.View>
+
+                {/* Food name */}
+                <Animatable.Text animation="fadeInUp" delay={100} duration={600} style={styles.foodName}>
+                    {item.name}
+                </Animatable.Text>
+
+                {/* White card sheet */}
+                <View style={styles.sheet}>
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
+
+                        {/* Quantity stepper centered */}
+                        <View style={styles.statsRow}>
+                            <View style={styles.stepper}>
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        const newQ = Math.max(1, quantity - 1);
+                                        setQuantity(newQ);
+                                        if (added) handleAddToCart(newQ);
+                                    }}
+                                    style={styles.stepBtn}
+                                >
+                                    <MinusIcon size={16} color="#374151" />
+                                </TouchableOpacity>
+                                <Text style={styles.stepCount}>{quantity}</Text>
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        const newQ = quantity + 1;
+                                        setQuantity(newQ);
+                                        if (added) handleAddToCart(newQ);
+                                    }}
+                                    style={styles.stepBtn}
+                                >
+                                    <PlusIcon size={16} color="#374151" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        {/* Description */}
+                        <View style={styles.descSection}>
+                            <Text style={styles.descTitle}>Description</Text>
+                            <Text style={styles.descText}>
+                                {item.description || "Indulge in our chef's special creation, a beautifully crafted dish made with the finest ingredients. Each bite is a burst of flavour, carefully seasoned and slow-cooked to perfection."}
+                            </Text>
+                        </View>
+                    </ScrollView>
+
+                    {/* Bottom bar: Price left | Button right */}
+                    <View style={styles.bottomBar}>
+                        <View>
+                            <Text style={styles.priceLabel}>Price</Text>
+                            <Text style={styles.priceValue}>₦{(item.price * quantity).toLocaleString()}</Text>
+                        </View>
+                        <TouchableOpacity
+                            onPress={added ? handleRemoveFromCart : () => handleAddToCart(quantity)}
+                            disabled={loading || foodData.isAvailable === false}
+                            style={[styles.cartBtn, added && styles.cartBtnRemove]}
+                            activeOpacity={0.85}
+                        >
+                            {loading
+                                ? <ActivityIndicator color="white" />
+                                : <Text style={styles.cartBtnText}>{added ? 'Remove' : 'Add to Cart'}</Text>
+                            }
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </SafeAreaView>
         </View>
     );
 }
+
+const HERO_HEIGHT = height * 0.47;
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#0f1c2e',
+    },
+    heroBg: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        width: '100%',
+        height: HERO_HEIGHT,
+    },
+    topNav: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        marginTop: 8,
+    },
+    backBtn: {
+        backgroundColor: 'white',
+        padding: 10,
+        borderRadius: 50,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+        elevation: 4,
+    },
+    heartBtn: {
+        backgroundColor: 'white',
+        padding: 10,
+        borderRadius: 50,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+        elevation: 4,
+    },
+    imageWrapper: {
+        alignItems: 'center',
+        marginTop: 8,
+    },
+    foodImage: {
+        width: width * 0.58,
+        height: width * 0.58,
+    },
+    foodName: {
+        color: 'white',
+        fontSize: 30,
+        fontWeight: '800',
+        textAlign: 'center',
+        marginTop: -8,
+        marginBottom: 18,
+        paddingHorizontal: 20,
+        letterSpacing: 0.3,
+        textShadowColor: 'rgba(0,0,0,0.3)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 6,
+    },
+    sheet: {
+        flex: 1,
+        backgroundColor: 'white',
+        borderTopLeftRadius: 36,
+        borderTopRightRadius: 36,
+        paddingTop: 28,
+        paddingHorizontal: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 10,
+    },
+    statsRow: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    stepper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f3f4f6',
+        borderRadius: 50,
+        paddingHorizontal: 6,
+        paddingVertical: 4,
+        gap: 4,
+    },
+    stepBtn: {
+        backgroundColor: 'white',
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    stepCount: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#111827',
+        minWidth: 28,
+        textAlign: 'center',
+    },
+    descSection: {
+        marginBottom: 8,
+    },
+    descTitle: {
+        fontSize: 22,
+        fontWeight: '800',
+        color: '#111827',
+        marginBottom: 10,
+    },
+    descText: {
+        fontSize: 14,
+        color: '#6b7280',
+        lineHeight: 22,
+    },
+    bottomBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 12,
+        marginBottom: 8,
+    },
+    priceLabel: {
+        fontSize: 13,
+        color: '#9ca3af',
+        fontWeight: '500',
+        marginBottom: 2,
+    },
+    priceValue: {
+        fontSize: 22,
+        fontWeight: '800',
+        color: '#111827',
+    },
+    cartBtn: {
+        backgroundColor: '#1a2a4a',
+        borderRadius: 20,
+        paddingVertical: 16,
+        paddingHorizontal: 28,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#1a2a4a',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.35,
+        shadowRadius: 12,
+        elevation: 8,
+    },
+    cartBtnRemove: {
+        backgroundColor: '#ef4444',
+        shadowColor: '#ef4444',
+    },
+    cartBtnText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+    },
+});

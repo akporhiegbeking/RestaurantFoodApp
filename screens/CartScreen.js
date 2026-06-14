@@ -1,16 +1,15 @@
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
-  ActivityIndicator,
+  ActivityIndicator, Alert
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { auth, db } from '../constants/firebase';
 import { useNavigation } from '@react-navigation/native';
 import React, { useState, useEffect } from 'react';
-import { collection, getDoc, getDocs, query, where, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import Toast from 'react-native-root-toast';
 import { ChevronLeftIcon } from 'react-native-heroicons/solid';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 
 const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
@@ -19,10 +18,15 @@ const CartScreen = () => {
   const navigation = useNavigation();
   const [cartItems, setCartItems] = useState([]);
   const [totalPrice, setTotalPrice] = useState(0);
-  const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState({});
   const [paymentMethod, setPaymentMethod] = useState('Pay now');
+
+  const validateNigerianPhoneNumber = (number) => {
+    if (!number) return false;
+    const regex = /^(\+234|234|0)(70|80|81|90|91|802|803|805|806|807|808|809|810|811|812|813|814|815|816|817|818|909|908|901|902|903|904|905|906|907)\d{7}$/;
+    return regex.test(number);
+  };
 
   const getUserData = async () => {
     const userQuery = query(
@@ -56,13 +60,18 @@ const CartScreen = () => {
       await getUserData();
       const user = auth.currentUser;
       if (user) {
-        const cartQuery = query(collection(db, 'cart'), where('uid', '==', user.uid));
+        const cartQuery = query(collection(db, 'carts'), where('userId', '==', user.uid));
         const querySnapshot = await getDocs(cartQuery);
-        const items = querySnapshot.docs
-          .map(doc => ({ ...doc.data(), id: doc.id }))
-          .filter(item => item.orderStatus !== 'placed'); // Filter out already placed items
-        setCartItems(items);
-        calculateTotal(items);
+        if (!querySnapshot.empty) {
+          const cartDoc = querySnapshot.docs[0];
+          const cartData = cartDoc.data();
+          const items = cartData.items || [];
+          setCartItems(items);
+          calculateTotal(items);
+        } else {
+          setCartItems([]);
+          setTotalPrice(0);
+        }
       } else {
         Toast.show('User is not logged in', {
           duration: Toast.durations.SHORT,
@@ -73,7 +82,6 @@ const CartScreen = () => {
       console.error('Error fetching cart items: ', error);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
@@ -81,20 +89,27 @@ const CartScreen = () => {
     fetchData();
   }, [auth.currentUser]);
 
-  const handleBuyNow = () => {
-    if (paymentMethod === 'Pay now') {
-      navigation.navigate('PayStackPayment', {
-        totalPrice,
-        cartItems,
-        userData,
-      });
-    } else {
-      navigation.navigate('PaymentOnDelivery', {
-        totalPrice,
-        cartItems,
-        userData,
-      });
+  const handleCheckout = () => {
+    if (cartItems.length === 0) return;
+
+    if (!validateNigerianPhoneNumber(userData?.phoneNumber)) {
+      Alert.alert(
+        'Phone Number Required',
+        'Please provide a valid Nigerian phone number in your profile before placing an order.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Update Profile', onPress: () => navigation.navigate('EditProfile') }
+        ]
+      );
+      return;
     }
+
+    const screen = paymentMethod === 'Pay now' ? 'PayStackPayment' : 'PaymentOnDelivery';
+    navigation.navigate(screen, {
+      totalPrice,
+      cartItems,
+      userData,
+    });
   };
 
   const calculateTotal = (items) => {
@@ -106,29 +121,56 @@ const CartScreen = () => {
     setTotalPrice(total);
   };
 
-  const handleQuantityChange = async (id, delta) => {
-    const updatedItems = cartItems.map(item => {
-      if (item.id === id) {
-        const newQuantity = item.quantity + delta;
-        if (newQuantity <= 0) {
-          handleRemoveItem(id);
-        } else {
-          item.quantity = newQuantity;
-          updateDoc(doc(db, 'cart', id), { quantity: newQuantity });
-        }
-      }
-      return item;
-    });
-    setCartItems(updatedItems);
-    calculateTotal(updatedItems);
-  };
-
-  const handleRemoveItem = async (id) => {
+  const handleQuantityChange = async (foodId, delta) => {
     try {
-      await deleteDoc(doc(db, 'cart', id));
-      const updatedItems = cartItems.filter(item => item.id !== id);
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const updatedItems = cartItems.map(item => {
+        if (item.foodId === foodId) {
+          const newQuantity = Math.max(0, item.quantity + delta);
+          return { ...item, quantity: newQuantity };
+        }
+        return item;
+      }).filter(item => item.quantity > 0);
+
       setCartItems(updatedItems);
       calculateTotal(updatedItems);
+
+      // Update Firestore
+      const cartQuery = query(collection(db, 'carts'), where('userId', '==', user.uid));
+      const cartSnap = await getDocs(cartQuery);
+      if (!cartSnap.empty) {
+        const cartDoc = cartSnap.docs[0];
+        await updateDoc(doc(db, 'carts', cartDoc.id), {
+          items: updatedItems,
+          updatedAt: serverTimestamp()
+        });
+      }
+    } catch (error) {
+      console.error('Error updating quantity: ', error);
+    }
+  };
+
+  const handleRemoveItem = async (foodId) => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const updatedItems = cartItems.filter(item => item.foodId !== foodId);
+      setCartItems(updatedItems);
+      calculateTotal(updatedItems);
+
+      // Update Firestore
+      const cartQuery = query(collection(db, 'carts'), where('userId', '==', user.uid));
+      const cartSnap = await getDocs(cartQuery);
+      if (!cartSnap.empty) {
+        const cartDoc = cartSnap.docs[0];
+        await updateDoc(doc(db, 'carts', cartDoc.id), {
+          items: updatedItems,
+          updatedAt: serverTimestamp()
+        });
+      }
     } catch (error) {
       console.error('Error removing item from cart: ', error);
     }
@@ -148,21 +190,21 @@ const CartScreen = () => {
         <Text style={styles.itemName}>{item.name}</Text>
         <View style={styles.priceContainer}>
           <Text style={styles.itemPrice}>
-            ₦ {item.price}
+            ₦ {Number(item.price).toLocaleString()}
           </Text>
         </View>
 
         <Text style={styles.stockInfo}>{item.stockInfo}</Text>
 
         <View style={styles.quantityControl}>
-          <TouchableOpacity onPress={() => handleQuantityChange(item.id, -1)}>
+          <TouchableOpacity onPress={() => handleQuantityChange(item.foodId, -1)}>
             <Text style={styles.quantityButton}>-</Text>
           </TouchableOpacity>
           <Text style={styles.quantity}>{item.quantity}</Text>
-          <TouchableOpacity onPress={() => handleQuantityChange(item.id, 1)}>
+          <TouchableOpacity onPress={() => handleQuantityChange(item.foodId, 1)}>
             <Text style={styles.quantityButton}>+</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleRemoveItem(item.id)}>
+          <TouchableOpacity onPress={() => handleRemoveItem(item.foodId)}>
             <Text style={styles.removeButton}>Remove</Text>
           </TouchableOpacity>
         </View>
@@ -178,7 +220,7 @@ const CartScreen = () => {
 
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <ChevronLeftIcon size="23" stroke={50} color="white" />
+            <ChevronLeftIcon size={23} color="white" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Cart</Text>
           <View style={styles.headerSpacer} />
@@ -186,7 +228,7 @@ const CartScreen = () => {
 
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#0000ff" />
+            <ActivityIndicator size="large" color="#FF6347" />
           </View>
         ) : cartItems.length === 0 ? (
           <View style={styles.emptyCartContainer}>
@@ -199,23 +241,24 @@ const CartScreen = () => {
           <>
             <View style={styles.summaryContainer}>
               <Text style={styles.summaryText}>Subtotal</Text>
-              <Text style={styles.totalPrice}>₦ {totalPrice.toFixed(2)}</Text>
+              <Text style={styles.totalPrice}>₦ {totalPrice.toLocaleString()}</Text>
             </View>
 
             <FlatList
               data={cartItems}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => item.foodId}
               renderItem={renderCartItem}
               contentContainerStyle={styles.cartList}
+              showsVerticalScrollIndicator={false}
             />
 
             <View style={styles.deliveryDetails}>
               <Text style={styles.deliveryTitle}>Delivery details</Text>
               <View style={styles.deliveryItem}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                   <Text style={styles.deliveryLabel}>Location</Text>
-                  <Text style={[styles.deliveryValue, { marginLeft: 10 }]}>
-                    {userData.home_address?.length > 25 ? userData.home_address.substring(0, 25) + '...' : userData.home_address || ''}
+                  <Text style={[styles.deliveryValue, { marginLeft: 10, flex: 1 }]} numberOfLines={1}>
+                    {userData.home_address || 'Enter delivery address'}
                   </Text>
                 </View>
 
@@ -236,30 +279,17 @@ const CartScreen = () => {
 
               <View style={styles.paymentSection}>
                 <Text style={styles.deliveryTitle}>Payment method</Text>
-                <TouchableOpacity
-                  style={styles.paymentOption}
-                  onPress={() => setPaymentMethod('Pay now')}
-                >
-                  <View style={[styles.radioButton, paymentMethod === 'Pay now' && styles.radioButtonSelected]}>
-                    {paymentMethod === 'Pay now' && <View style={styles.radioInner} />}
+                <View style={styles.paymentOption}>
+                  <View style={[styles.radioButton, styles.radioButtonSelected]}>
+                    <View style={styles.radioInner} />
                   </View>
                   <Text style={styles.paymentOptionText}>Pay now</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.paymentOption}
-                  onPress={() => setPaymentMethod('Pay on Delivery')}
-                >
-                  <View style={[styles.radioButton, paymentMethod === 'Pay on Delivery' && styles.radioButtonSelected]}>
-                    {paymentMethod === 'Pay on Delivery' && <View style={styles.radioInner} />}
-                  </View>
-                  <Text style={styles.paymentOptionText}>Pay on Delivery</Text>
-                </TouchableOpacity>
+                </View>
               </View>
             </View>
 
-            <TouchableOpacity onPress={handleBuyNow} style={styles.checkoutButton}>
-              <Text style={styles.checkoutButtonText}>Checkout (₦ {totalPrice.toFixed(2)})</Text>
+            <TouchableOpacity onPress={handleCheckout} style={styles.checkoutButton}>
+              <Text style={styles.checkoutButtonText}>Checkout (₦ {totalPrice.toLocaleString()})</Text>
             </TouchableOpacity>
           </>
         )}
@@ -284,11 +314,6 @@ const styles = StyleSheet.create({
     padding: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
-  },
-  carTextSummary: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 15,
   },
   summaryText: {
     fontSize: 16,
@@ -331,11 +356,6 @@ const styles = StyleSheet.create({
     color: '#888',
     marginRight: 10,
   },
-  discountedPrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000',
-  },
   stockInfo: {
     fontSize: 14,
     color: '#888',
@@ -367,7 +387,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 50,
+    marginBottom: 20, // Reduced from 50 to fit better with safe area
     marginHorizontal: 15,
     borderRadius: 10,
   },
@@ -385,10 +405,6 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: 10,
-  },
-  headerButtonText: {
-    color: '#fff',
-    fontSize: 18,
   },
   headerTitle: {
     color: '#fff',
