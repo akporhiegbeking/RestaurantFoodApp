@@ -3,12 +3,12 @@ import {
   ActivityIndicator, RefreshControl, TextInput, FlatList, Dimensions
 } from 'react-native';
 import { Image } from 'expo-image';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   ShoppingCartIcon, MagnifyingGlassIcon, AdjustmentsHorizontalIcon, UserIcon,
-  DocumentTextIcon, ChevronRightIcon
+  DocumentTextIcon, ChevronRightIcon, BarsArrowDownIcon, BarsArrowUpIcon
 } from 'react-native-heroicons/outline';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -30,6 +30,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [cartCount, setCartCount] = useState(0);
   const [userData, setUserData] = useState(null);
+  const [sortOrder, setSortOrder] = useState('asc'); // 'asc' = newest first, 'desc' = oldest first
 
   const fetchFoodItems = async () => {
     try {
@@ -115,6 +116,16 @@ export default function HomeScreen() {
     fetchFoodItems().then(() => setRefreshing(false));
   }, []);
 
+  // Sort food items by createdAt (newest first = default 'asc', oldest first = 'desc')
+  const sortedFoods = useMemo(() => {
+    const filtered = foodItems.filter(item => activeCategory === 'All' || item.category === activeCategory);
+    return [...filtered].sort((a, b) => {
+      const timeA = a.createdAt?.seconds ?? 0;
+      const timeB = b.createdAt?.seconds ?? 0;
+      return sortOrder === 'asc' ? timeB - timeA : timeA - timeB;
+    });
+  }, [foodItems, activeCategory, sortOrder]);
+
   return (
     <View style={{ flex: 1 }}>
       <StatusBar style="light" translucent backgroundColor="transparent" />
@@ -143,7 +154,7 @@ export default function HomeScreen() {
 
       <SafeAreaView style={{ flex: 1 }}>
         <FlatList
-          data={foodItems.filter(item => activeCategory === 'All' || item.category === activeCategory)}
+          data={sortedFoods}
           keyExtractor={(item) => item.id}
           numColumns={2}
           columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 15 }}
@@ -214,28 +225,40 @@ export default function HomeScreen() {
                 </View>
               </View>
 
-              {/* Categories */}
-              <FlatList
-                horizontal
-                data={categories}
-                keyExtractor={(item, index) => index.toString()}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 20, marginTop: 30, paddingBottom: 10 }}
-                renderItem={({ item: cat, index }) => {
-                  const isActive = activeCategory === cat;
-                  return (
-                    <TouchableOpacity
-                      onPress={() => setActiveCategory(cat)}
-                      style={{ marginRight: 30, alignItems: 'center' }}
-                    >
-                      <Text style={{ fontSize: 18, fontWeight: isActive ? 'bold' : '500', color: isActive ? 'white' : '#fff' }}>
-                        {cat}
-                      </Text>
-                      {isActive && <View style={{ width: 20, height: 3, backgroundColor: 'white', marginTop: 5, borderRadius: 2 }} />}
-                    </TouchableOpacity>
-                  );
-                }}
-              />
+              {/* Categories + Sort */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 30 }}>
+                <FlatList
+                  horizontal
+                  data={categories}
+                  keyExtractor={(item, index) => index.toString()}
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 10 }}
+                  style={{ flex: 1 }}
+                  renderItem={({ item: cat, index }) => {
+                    const isActive = activeCategory === cat;
+                    return (
+                      <TouchableOpacity
+                        onPress={() => setActiveCategory(cat)}
+                        style={{ marginRight: 30, alignItems: 'center' }}
+                      >
+                        <Text style={{ fontSize: 18, fontWeight: isActive ? 'bold' : '500', color: isActive ? 'white' : '#fff' }}>
+                          {cat}
+                        </Text>
+                        {isActive && <View style={{ width: 20, height: 3, backgroundColor: 'white', marginTop: 5, borderRadius: 2 }} />}
+                      </TouchableOpacity>
+                    );
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                  style={{ paddingHorizontal: 14, paddingBottom: 10, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.3)' }}
+                >
+                  {sortOrder === 'asc'
+                    ? <BarsArrowDownIcon size={22} color="white" />
+                    : <BarsArrowUpIcon size={22} color="#FCD34D" />
+                  }
+                </TouchableOpacity>
+              </View>
 
               {loading && (
                 <View style={{ width: '100%', height: 200, justifyContent: 'center' }}>
