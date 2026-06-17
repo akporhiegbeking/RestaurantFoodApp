@@ -124,9 +124,10 @@ export default function HomeScreen() {
         // source={require('../assets/images/')}
         placeholder={{ blurhash }}
         contentFit="cover"
-        transition={1000}
+        transition={0}
         style={{ position: 'absolute', top: 0, width: '100%', height: 120 }}
         blurRadius={40}
+        cachePolicy="memory-and-disk"
       />
 
       {/* Background Image */}
@@ -134,9 +135,10 @@ export default function HomeScreen() {
         source={require('../assets/images/background.png')}
         placeholder={{ blurhash }}
         contentFit="cover"
-        transition={1000}
+        transition={0}
         style={{ position: 'absolute', width: '100%', height: '100%' }}
         blurRadius={40}
+        cachePolicy="memory-and-disk"
       />
 
       <SafeAreaView style={{ flex: 1 }}>
@@ -169,8 +171,9 @@ export default function HomeScreen() {
                       source={userData?.imageUrl ? { uri: userData.imageUrl } : require('../assets/images/avatar.png')}
                       placeholder={{ blurhash }}
                       contentFit="cover"
-                      transition={1000}
+                      transition={0}
                       style={{ height: 48, width: 48, borderRadius: 24 }}
+                      cachePolicy="memory-and-disk"
                     />
                   </View>
                   <View>
@@ -202,7 +205,7 @@ export default function HomeScreen() {
 
               {/* Search Bar */}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, marginTop: 30 }}>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 20, paddingHorizontal: 15, height: 60, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 }}>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 20, paddingHorizontal: 15, height: 50, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 }}>
                   <MagnifyingGlassIcon size={24} color="#999" />
                   <TextInput
                     placeholder="Search"
@@ -225,7 +228,7 @@ export default function HomeScreen() {
                       onPress={() => setActiveCategory(cat)}
                       style={{ marginRight: 30, alignItems: 'center' }}
                     >
-                      <Text style={{ fontSize: 18, fontWeight: isActive ? 'bold' : '500', color: isActive ? 'white' : '#666' }}>
+                      <Text style={{ fontSize: 18, fontWeight: isActive ? 'bold' : '500', color: isActive ? 'white' : '#fff' }}>
                         {cat}
                       </Text>
                       {isActive && <View style={{ width: 20, height: 3, backgroundColor: 'white', marginTop: 5, borderRadius: 2 }} />}
@@ -244,7 +247,7 @@ export default function HomeScreen() {
           renderItem={({ item, index }) => (
             <FoodCard item={item} index={index} key={index} />
           )}
-          ListFooterComponent={<View style={{ height: 20 }} />}
+          ListFooterComponent={<View style={{ height: 100 }} />}
         />
       </SafeAreaView>
     </View>

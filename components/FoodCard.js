@@ -88,8 +88,9 @@ const FoodCard = memo(({ item, index }) => {
           source={{ uri: item.imageUrl }}
           placeholder={{ blurhash }}
           contentFit="contain"
-          transition={1000}
+          transition={0}
           style={styles.image}
+          cachePolicy="memory-and-disk"
         />
       </TouchableOpacity>
 
@@ -106,9 +107,9 @@ const FoodCard = memo(({ item, index }) => {
           <TouchableOpacity
             activeOpacity={0.7}
             style={styles.cartButton}
-            onPress={handleAddToCart}
+            onPress={() => navigation.navigate('FoodDetails', { ...item })}
           >
-            <Ionicons name="basket" size={18} color="white" />
+            <Ionicons name="arrow-forward" size={18} color="white" />
           </TouchableOpacity>
         </View>
       </View>

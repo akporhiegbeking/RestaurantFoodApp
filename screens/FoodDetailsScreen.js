@@ -157,6 +157,9 @@ export default function FoodDetailsScreen(props) {
                 await setDoc(doc(collection(db, 'saved_items')), {
                     uid: auth.currentUser.uid,
                     food_id: item.id,
+                    name: item.name || '',
+                    price: item.price || 0,
+                    imageUrl: item.imageUrl || '',
                     savedAt: serverTimestamp(),
                 });
                 setLiked(true);
@@ -177,6 +180,8 @@ export default function FoodDetailsScreen(props) {
                 style={styles.heroBg}
                 contentFit="cover"
                 blurRadius={40}
+                transition={0}
+                cachePolicy="memory-and-disk"
             />
 
             <SafeAreaView style={{ flex: 1 }}>
@@ -199,8 +204,9 @@ export default function FoodDetailsScreen(props) {
                         source={{ uri: item.imageUrl }}
                         placeholder={{ blurhash }}
                         contentFit="contain"
-                        transition={800}
+                        transition={0}
                         style={styles.foodImage}
+                        cachePolicy="memory-and-disk"
                     />
                 </Animatable.View>
 

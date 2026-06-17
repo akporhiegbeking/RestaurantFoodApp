@@ -6,7 +6,9 @@ import {
 import { Image } from 'expo-image';
 import { auth, db } from '../constants/firebase';
 import { useNavigation } from '@react-navigation/native';
-import { collection, getDocs, query, where, deleteDoc, doc } from 'firebase/firestore';
+import {
+  collection, getDocs, query, where, deleteDoc, doc, onSnapshot,
+} from 'firebase/firestore';
 import Toast from 'react-native-root-toast';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,29 +21,69 @@ const SavedItemsScreen = () => {
   const [savedItems, setSavedItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchSavedItems = async () => {
-    try {
-      const user = auth.currentUser;
-      if (user) {
-        const savedItemsQuery = query(collection(db, 'saved_items'), where('uid', '==', user.uid));
-        const querySnapshot = await getDocs(savedItemsQuery);
-        const items = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-        setSavedItems(items);
-      } else {
-        Toast.show('User is not logged in', {
-          duration: Toast.durations.SHORT,
-          position: Toast.positions.BOTTOM,
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching saved items: ', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchSavedItems();
+    const user = auth.currentUser;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const savedItemsQuery = query(
+      collection(db, 'saved_items'),
+      where('uid', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(savedItemsQuery, async (snapshot) => {
+      const rawItems = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+
+      // Separate items with metadata from those without
+      const completeItems = [];
+      const pendingFoodIds = [];
+      const pendingIndices = [];
+
+      rawItems.forEach((item, index) => {
+        if (item.name && item.price && item.imageUrl) {
+          completeItems[index] = item;
+        } else {
+          pendingFoodIds.push(item.food_id);
+          pendingIndices.push(index);
+        }
+      });
+
+      if (pendingFoodIds.length > 0) {
+        setSavedItems(rawItems); // Show what we have (even if empty)
+
+        // Fetch missing food details in batches of 30 (Firestore limit for 'in')
+        const fetchedFoods = {};
+        for (let i = 0; i < pendingFoodIds.length; i += 30) {
+          const batch = pendingFoodIds.slice(i, i + 30);
+          const foodsQuery = query(collection(db, 'foods'), where('__name__', 'in', batch));
+          const foodSnap = await getDocs(foodsQuery);
+          foodSnap.forEach(doc => {
+            fetchedFoods[doc.id] = { ...doc.data(), id: doc.id };
+          });
+        }
+
+        // Merge fetched data back into the list
+        const finalItems = rawItems.map(item => {
+          if (!item.name && fetchedFoods[item.food_id]) {
+            const { id, ...foodData } = fetchedFoods[item.food_id];
+            return { ...item, ...foodData };
+          }
+          return item;
+        });
+        setSavedItems(finalItems);
+      } else {
+        setSavedItems(rawItems);
+      }
+
+      setLoading(false);
+    }, (error) => {
+      console.error('Error fetching saved items: ', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [auth.currentUser]);
 
   const handleRemoveItem = async (id) => {
@@ -69,7 +111,7 @@ const SavedItemsScreen = () => {
       />
       <View style={styles.itemDetails}>
         <Text style={styles.itemName}>{item.name}</Text>
-        <Text style={styles.itemPrice}>₦ {item.price}</Text>
+        <Text style={styles.itemPrice}>₦ {Number(item.price).toLocaleString()}</Text>
         <TouchableOpacity onPress={() => handleRemoveItem(item.id)} style={styles.removeButton}>
           <Text style={styles.removeButtonText}>Remove</Text>
         </TouchableOpacity>

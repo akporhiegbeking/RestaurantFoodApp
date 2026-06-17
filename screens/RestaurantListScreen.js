@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     View, Text, StyleSheet, FlatList, TouchableOpacity,
     ActivityIndicator, ScrollView, Dimensions, TextInput
@@ -6,181 +6,334 @@ import {
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, startAfter, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../constants/firebase';
 import {
-    ChevronLeftIcon, ShoppingCartIcon, MagnifyingGlassIcon, AdjustmentsVerticalIcon,
-    ArrowsUpDownIcon, HeartIcon, StarIcon, EllipsisVerticalIcon
+    ChevronLeftIcon, ShoppingCartIcon, MagnifyingGlassIcon,
+    ArrowsUpDownIcon
 } from 'react-native-heroicons/outline';
-import { HeartIcon as HeartIconSolid } from 'react-native-heroicons/solid';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = (width - 48) / 2;
 const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
 
+const CACHE_KEY = 'cached_merchants';
+
+const MerchantCard = React.memo(({ item, onPress }) => (
+    <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.9}
+        onPress={() => onPress(item)}
+    >
+        <View style={styles.imageWrapper}>
+            <Image
+                source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/images/background.png')}
+                placeholder={{ blurhash }}
+                contentFit="cover"
+                transition={0}
+                style={styles.cardImage}
+                cachePolicy="memory-and-disk"
+            />
+            <View style={styles.badgeRow}>
+                <View style={styles.dealBadge}>
+                    <Text style={styles.dealText}>Official Store</Text>
+                </View>
+                {item.isOpen && (
+                    <View style={styles.discountBadge}>
+                        <Text style={styles.discountText}>OPEN</Text>
+                    </View>
+                )}
+            </View>
+        </View>
+
+        <View style={styles.cardContent}>
+            <Text style={styles.businessName} numberOfLines={2}>
+                {item.businessName || 'Business Name'}
+            </Text>
+
+            <Text style={styles.businessType}>
+                {item.businessType || 'General'}
+            </Text>
+
+            <View style={styles.actionBtn}>
+                <Text style={styles.actionBtnText}>Visit Store</Text>
+            </View>
+        </View>
+    </TouchableOpacity>
+));
+
 const RestaurantListScreen = () => {
     const navigation = useNavigation();
     const [merchants, setMerchants] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [favorites, setFavorites] = useState({});
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [lastVisible, setLastVisible] = useState(null);
+    const [hasMore, setHasMore] = useState(true);
+
+    const [sortOrder, setSortOrder] = useState('none');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [userData, setUserData] = useState(null);
+    const [cartCount, setCartCount] = useState(0);
+
+    const PAGE_SIZE = 10;
 
     useEffect(() => {
-        const q = query(
-            collection(db, 'merchants'),
-            where('isApproved', '==', true)
-        );
+        const loadCache = async () => {
+            try {
+                const cached = await AsyncStorage.getItem(CACHE_KEY);
+                if (cached) {
+                    setMerchants(JSON.parse(cached));
+                    setLoading(false);
+                }
+            } catch (e) {
+                console.error("Cache load error", e);
+            }
+        };
+        loadCache();
+        fetchMerchants();
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
+        // Fetch user profile
+        const fetchUserProfile = async () => {
+            if (!auth.currentUser) return;
+            try {
+                const userQuery = query(collection(db, 'users'), where('uid', '==', auth.currentUser.uid));
+                const snapshot = await getDocs(userQuery);
+                if (!snapshot.empty) setUserData(snapshot.docs[0].data());
+            } catch (e) {
+                console.error('Profile fetch error', e);
+            }
+        };
+        fetchUserProfile();
+
+        // Real-time cart count listener
+        if (auth.currentUser) {
+            const cartQuery = query(collection(db, 'carts'), where('userId', '==', auth.currentUser.uid));
+            const unsubscribeCart = onSnapshot(cartQuery, (snapshot) => {
+                if (!snapshot.empty) {
+                    const cartData = snapshot.docs[0].data();
+                    const totalCount = (cartData.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
+                    setCartCount(totalCount);
+                } else {
+                    setCartCount(0);
+                }
+            });
+            return () => unsubscribeCart();
+        }
+    }, []);
+
+    const fetchMerchants = async () => {
+        try {
+            if (merchants.length === 0) setLoading(true);
+            const q = query(
+                collection(db, 'merchants'),
+                where('isApproved', '==', true),
+                orderBy('businessName'),
+                limit(PAGE_SIZE)
+            );
+
+            const snapshot = await getDocs(q);
             const fetchedMerchants = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
+
             setMerchants(fetchedMerchants);
-            setLoading(false);
-        }, (error) => {
+            setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+            setHasMore(snapshot.docs.length === PAGE_SIZE);
+
+            // Save to cache
+            AsyncStorage.setItem(CACHE_KEY, JSON.stringify(fetchedMerchants)).catch(console.error);
+
+        } catch (error) {
             console.error("Error fetching merchants:", error);
+        } finally {
             setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, []);
-
-    const toggleFavorite = (id) => {
-        setFavorites(prev => ({
-            ...prev,
-            [id]: !prev[id]
-        }));
+        }
     };
 
-    const MerchantCard = ({ item }) => (
-        <TouchableOpacity
-            style={styles.card}
-            activeOpacity={0.9}
-            onPress={() => navigation.navigate('RestaurantDetails', { restaurantId: item.id })}
-        >
-            <View style={styles.imageWrapper}>
-                <Image
-                    source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/images/background.png')}
-                    placeholder={{ blurhash }}
-                    contentFit="cover"
-                    transition={1000}
-                    style={styles.cardImage}
-                />
-                <View style={styles.badgeRow}>
-                    <View style={styles.dealBadge}>
-                        <Text style={styles.dealText}>Official Store</Text>
-                    </View>
-                    {item.isOpen && (
-                        <View style={styles.discountBadge}>
-                            <Text style={styles.discountText}>OPEN</Text>
-                        </View>
-                    )}
-                </View>
-                <TouchableOpacity
-                    style={styles.favoriteBtn}
-                    onPress={() => toggleFavorite(item.id)}
-                >
-                    {favorites[item.id] ? (
-                        <HeartIconSolid size={20} color="#F59E0B" />
-                    ) : (
-                        <HeartIcon size={20} color="#F59E0B" />
-                    )}
-                </TouchableOpacity>
-            </View>
+    const fetchMoreMerchants = async () => {
+        if (loadingMore || !hasMore || !lastVisible) return;
 
-            <View style={styles.cardContent}>
-                <Text style={styles.businessName} numberOfLines={2}>
-                    {item.businessName || 'Business Name'}
-                </Text>
+        try {
+            setLoadingMore(true);
+            const q = query(
+                collection(db, 'merchants'),
+                where('isApproved', '==', true),
+                orderBy('businessName'),
+                startAfter(lastVisible),
+                limit(PAGE_SIZE)
+            );
 
-                <Text style={styles.businessType}>
-                    {item.businessType || 'General'}
-                </Text>
+            const snapshot = await getDocs(q);
+            const newMerchants = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
 
-                <View style={styles.ratingRow}>
-                    <View style={styles.stars}>
-                        {[1, 2, 3, 4, 5].map((s) => (
-                            <StarIcon key={s} size={12} color="#F59E0B" style={{ marginRight: 1 }} />
-                        ))}
-                    </View>
-                    <Text style={styles.ratingCount}>(12)</Text>
-                </View>
+            setMerchants(prev => [...prev, ...newMerchants]);
+            setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+            setHasMore(snapshot.docs.length === PAGE_SIZE);
+        } catch (error) {
+            console.error("Error fetching more merchants:", error);
+        } finally {
+            setLoadingMore(false);
+        }
+    };
 
-                <View style={styles.footerRow}>
-                    <Text style={styles.expressText}>EXPRESS</Text>
-                </View>
 
-                <TouchableOpacity
-                    style={styles.actionBtn}
-                    onPress={() => navigation.navigate('RestaurantDetails', { restaurantId: item.id })}
-                >
-                    <Text style={styles.actionBtnText}>Visit Store</Text>
-                </TouchableOpacity>
-            </View>
-        </TouchableOpacity>
-    );
+
+    const handlePressMerchant = useCallback((item) => {
+        navigation.navigate('RestaurantMerchantDetails', { restaurant: item });
+    }, [navigation]);
+
+    const sortedMerchants = useMemo(() => {
+        let result = [...merchants];
+        if (sortOrder === 'asc') {
+            result.sort((a, b) => (a.businessName || '').localeCompare(b.businessName || ''));
+        } else if (sortOrder === 'desc') {
+            result.sort((a, b) => (b.businessName || '').localeCompare(a.businessName || ''));
+        }
+        return result;
+    }, [merchants, sortOrder]);
+
+    const filteredMerchants = useMemo(() => {
+        if (!searchQuery.trim()) return sortedMerchants;
+        const q = searchQuery.toLowerCase();
+        return sortedMerchants.filter(m =>
+            (m.businessName || '').toLowerCase().includes(q) ||
+            (m.businessType || '').toLowerCase().includes(q)
+        );
+    }, [sortedMerchants, searchQuery]);
+
+    const toggleSort = () => {
+        setSortOrder(prev => {
+            if (prev === 'none') return 'asc';
+            if (prev === 'asc') return 'desc';
+            return 'none';
+        });
+    };
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <StatusBar style="dark" />
+        <View style={{ flex: 1 }}>
+            {/* Background Image - Blurred */}
+            <Image
+                source={require('../assets/images/background.png')}
+                placeholder={{ blurhash }}
+                contentFit="cover"
+                transition={0}
+                style={StyleSheet.absoluteFillObject}
+                blurRadius={40}
+                cachePolicy="memory-and-disk"
+            />
 
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <ChevronLeftIcon size={24} color="#1A1A1A" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>MarketPlace</Text>
-                <TouchableOpacity style={styles.cartBtn} onPress={() => navigation.navigate('Cart')}>
-                    <ShoppingCartIcon size={24} color="#1A1A1A" />
-                    <View style={styles.cartBadge}>
-                        <Text style={styles.cartBadgeText}>1</Text>
-                    </View>
-                </TouchableOpacity>
-            </View>
+            <SafeAreaView style={styles.container} edges={['top']}>
+                <StatusBar style="light" />
 
-            <View style={styles.body}>
-                {loading ? (
-                    <View style={styles.center}>
-                        <ActivityIndicator size="large" color="#F59E0B" />
-                    </View>
-                ) : merchants.length === 0 ? (
-                    <View style={styles.center}>
-                        <Text style={styles.emptyText}>No approved merchants found</Text>
-                    </View>
-                ) : (
-                    <FlatList
-                        data={merchants}
-                        keyExtractor={(item) => item.id}
-                        renderItem={({ item }) => <MerchantCard item={item} />}
-                        numColumns={2}
-                        columnWrapperStyle={styles.row}
-                        showsVerticalScrollIndicator={false}
-                        contentContainerStyle={styles.listContent}
+                {/* Header */}
+                <View style={styles.header}>
+                    {/* User avatar — tappable to Profile */}
+                    <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+                        <Image
+                            source={userData?.imageUrl
+                                ? { uri: userData.imageUrl }
+                                : require('../assets/images/avatar.png')}
+                            placeholder={{ blurhash }}
+                            contentFit="cover"
+                            transition={0}
+                            style={styles.headerAvatar}
+                            cachePolicy="memory-and-disk"
+                        />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>MarketPlace</Text>
+                    {/* Cart icon with live badge */}
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('Cart')}
+                        style={{ padding: 5 }}
+                    >
+                        <ShoppingCartIcon size={28} color="white" />
+                        {cartCount > 0 && (
+                            <View style={styles.cartBadge}>
+                                <Text style={styles.cartBadgeText}>{cartCount}</Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
+                </View>
+
+                {/* Search Bar */}
+                <View style={styles.searchWrapper}>
+                    <MagnifyingGlassIcon size={18} color="#9CA3AF" style={{ marginLeft: 4 }} />
+                    <TextInput
+                        placeholder="Search merchants..."
+                        placeholderTextColor="#9CA3AF"
+                        style={styles.searchInput}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        returnKeyType="search"
                     />
-                )}
-            </View>
+                </View>
 
-            {/* Floating Controls */}
-            <View style={styles.floatingControls}>
-                <TouchableOpacity style={styles.controlBtn}>
-                    <ArrowsUpDownIcon size={20} color="white" />
-                    <Text style={styles.controlText}>Sort</Text>
-                </TouchableOpacity>
-                <View style={styles.controlDivider} />
-                <TouchableOpacity style={styles.controlBtn}>
-                    <AdjustmentsVerticalIcon size={20} color="white" />
-                    <Text style={styles.controlText}>Filters</Text>
-                </TouchableOpacity>
-            </View>
-        </SafeAreaView>
+                <View style={styles.body}>
+                    {loading && merchants.length === 0 ? (
+                        <View style={styles.center}>
+                            <ActivityIndicator size="large" color="#F59E0B" />
+                        </View>
+                    ) : filteredMerchants.length === 0 ? (
+                        <View style={styles.center}>
+                            <Text style={styles.emptyText}>
+                                {searchQuery ? 'No merchants match your search' : 'No approved merchants found'}
+                            </Text>
+                        </View>
+                    ) : (
+                        <FlatList
+                            data={filteredMerchants}
+                            keyExtractor={(item) => item.id}
+                            renderItem={({ item }) => (
+                                <MerchantCard
+                                    item={item}
+                                    onPress={handlePressMerchant}
+                                />
+                            )}
+                            numColumns={2}
+                            columnWrapperStyle={styles.row}
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={styles.listContent}
+                            onEndReached={fetchMoreMerchants}
+                            onEndReachedThreshold={0.5}
+                            initialNumToRender={8}
+                            maxToRenderPerBatch={10}
+                            windowSize={5}
+                            removeClippedSubviews={true}
+                            ListFooterComponent={() => (
+                                loadingMore ? (
+                                    <View style={{ paddingVertical: 20 }}>
+                                        <ActivityIndicator size="small" color="#F59E0B" />
+                                    </View>
+                                ) : null
+                            )}
+                        />
+                    )}
+                </View>
+
+                {/* Floating Controls */}
+                <View style={styles.floatingControls}>
+                    <TouchableOpacity style={styles.controlBtn} onPress={toggleSort}>
+                        <ArrowsUpDownIcon size={20} color="white" />
+                        <Text style={styles.controlText}>
+                            Sort {sortOrder === 'none' ? '' : `(${sortOrder === 'asc' ? 'A-Z' : 'Z-A'})`}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: 'transparent',
     },
     header: {
         flexDirection: 'row',
@@ -188,39 +341,44 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingVertical: 12,
-        backgroundColor: 'white',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
-    },
-    backBtn: {
-        padding: 4,
     },
     headerTitle: {
-        fontSize: 20,
-        fontWeight: '800',
-        color: '#1A1A1A',
+        fontSize: 24,
+        fontWeight: '900',
+        color: 'white',
+        textShadowColor: 'black',
+        textShadowOffset: { width: 2, height: 2 },
+        textShadowRadius: 2,
+        flex: 1,
+        textAlign: 'center',
     },
-    cartBtn: {
-        padding: 4,
-        position: 'relative',
+    headerAvatar: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        borderWidth: 2,
+        borderColor: 'white',
+    },
+    headerSpacer: {
+        width: 42,
     },
     cartBadge: {
         position: 'absolute',
-        top: -4,
-        right: -4,
-        backgroundColor: '#F59E0B',
+        right: -2,
+        top: -2,
+        backgroundColor: '#EF4444',
         borderRadius: 10,
         width: 20,
         height: 20,
-        alignItems: 'center',
         justifyContent: 'center',
+        alignItems: 'center',
         borderWidth: 2,
         borderColor: 'white',
     },
     cartBadgeText: {
         color: 'white',
         fontSize: 10,
-        fontWeight: '900',
+        fontWeight: '800',
     },
     body: {
         flex: 1,
@@ -286,14 +444,7 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: '800',
     },
-    favoriteBtn: {
-        position: 'absolute',
-        bottom: 8,
-        right: 8,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        padding: 6,
-        borderRadius: 20,
-    },
+
     cardContent: {
         padding: 12,
     },
@@ -309,33 +460,12 @@ const styles = StyleSheet.create({
         color: '#6B7280',
         marginVertical: 4,
     },
-    ratingRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    stars: {
-        flexDirection: 'row',
-    },
-    ratingCount: {
-        fontSize: 11,
-        color: '#9CA3AF',
-        marginLeft: 4,
-    },
-    footerRow: {
-        marginBottom: 12,
-    },
-    expressText: {
-        fontSize: 10,
-        fontWeight: '900',
-        color: '#F59E0B',
-        fontStyle: 'italic',
-    },
     actionBtn: {
         backgroundColor: '#F59E0B',
         paddingVertical: 10,
         borderRadius: 8,
         alignItems: 'center',
+        marginTop: 8,
     },
     actionBtnText: {
         color: 'white',
@@ -357,6 +487,27 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
         elevation: 8,
     },
+    searchWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.92)',
+        marginHorizontal: 16,
+        marginBottom: 8,
+        borderRadius: 14,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        gap: 8,
+        shadowColor: '#000',
+        shadowOpacity: 0.08,
+        shadowRadius: 6,
+        elevation: 3,
+    },
+    searchInput: {
+        flex: 1,
+        fontSize: 15,
+        color: '#1F2937',
+        paddingVertical: 0,
+    },
     controlBtn: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -367,12 +518,6 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         marginLeft: 8,
     },
-    controlDivider: {
-        width: 1,
-        height: 20,
-        backgroundColor: '#4B5563',
-        marginHorizontal: 15,
-    },
     emptyText: {
         fontSize: 16,
         color: '#9CA3AF',
@@ -381,4 +526,3 @@ const styles = StyleSheet.create({
 });
 
 export default RestaurantListScreen;
-

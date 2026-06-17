@@ -9,7 +9,7 @@ import { signOut } from 'firebase/auth';
 import { auth, db } from '../constants/firebase';
 import { getDocs, query, collection, where } from 'firebase/firestore';
 import {
-  ChevronLeftIcon, Cog6ToothIcon, EyeIcon, UserIcon, HeartIcon, 
+  ChevronLeftIcon, Cog6ToothIcon, EyeIcon, UserIcon, HeartIcon,
   ShieldCheckIcon, ArrowRightOnRectangleIcon, ChevronRightIcon
 } from 'react-native-heroicons/outline';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -49,6 +49,14 @@ const ProfileScreen = () => {
 
   const getUserData = async () => {
     if (!auth.currentUser) return;
+
+    // Check cache
+    const cachedUser = await AsyncStorage.getItem(`user_${auth.currentUser.uid}`);
+    if (cachedUser) {
+      setUserData(JSON.parse(cachedUser));
+      setLoading(false);
+    }
+
     const userQuery = query(
       collection(db, 'users'),
       where('uid', '==', auth.currentUser.uid)
@@ -62,6 +70,7 @@ const ProfileScreen = () => {
       const userDoc = userSnapshot.docs[0];
       const user = userDoc.data();
       setUserData({ ...user });
+      AsyncStorage.setItem(`user_${auth.currentUser.uid}`, JSON.stringify(user)).catch(e => console.error(e));
     } catch (error) {
       console.error('Error fetching user data:', error);
     } finally {
@@ -113,8 +122,9 @@ const ProfileScreen = () => {
         source={require('../assets/images/background.png')}
         placeholder={{ blurhash }}
         contentFit="cover"
-        transition={1000}
+        transition={0}
         style={[StyleSheet.absoluteFill, { blurRadius: 20 }]}
+        cachePolicy="memory-and-disk"
       />
       {/* Top Background Gradient */}
       <View style={styles.headerBackground}>
@@ -138,8 +148,9 @@ const ProfileScreen = () => {
                   source={userData.imageUrl ? { uri: userData.imageUrl } : require('../assets/images/avatar.png')}
                   placeholder={{ blurhash }}
                   contentFit="cover"
-                  transition={1000}
+                  transition={0}
                   style={styles.avatar}
+                  cachePolicy="memory-and-disk"
                 />
                 <View style={styles.statusDot} />
               </View>
@@ -179,6 +190,11 @@ const ProfileScreen = () => {
               label="Edit My Profile"
               icon={<UserIcon size={22} color="#F59E0B" />}
               onPress={() => navigation.navigate('EditProfile', { userData })}
+            />
+            <MenuItem
+              label="Saved Stores"
+              icon={<ShieldCheckIcon size={22} color="#F59E0B" />}
+              onPress={() => navigation.navigate('SavedStores')}
             />
             <MenuItem
               label="My Saved Items"

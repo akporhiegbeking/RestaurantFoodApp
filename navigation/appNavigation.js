@@ -13,9 +13,11 @@ import PayStackPayment from '../screens/PayStackPayment';
 import OrderSuccess from '../screens/OrderSuccessScreen';
 
 import SavedItemsScreen from '../screens/SavedItemsScreen';
+import SavedStoresScreen from '../screens/SavedStoresScreen';
 import OrderDetails from '../screens/OrderDetails';
 import useAuth from '../hooks/useAuth';
-import RestaurantDetailsScreen from '../screens/RestaurantDetailsScreen';
+
+import RestaurantMerchantDetails from '../screens/RestaurantMerchantDetails';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import TabNavigator from './TabNavigator';
 
@@ -52,8 +54,10 @@ export default function AppNavigation() {
 
             <Stack.Screen name="OrderSuccess" options={{ headerShown: false }} component={OrderSuccess} />
             <Stack.Screen name="SavedItems" options={{ headerShown: false }} component={SavedItemsScreen} />
+            <Stack.Screen name="SavedStores" options={{ headerShown: false }} component={SavedStoresScreen} />
             <Stack.Screen name="OrderDetails" options={{ headerShown: false }} component={OrderDetails} />
-            <Stack.Screen name="RestaurantDetails" options={{ headerShown: false }} component={RestaurantDetailsScreen} />
+
+            <Stack.Screen name="RestaurantMerchantDetails" options={{ headerShown: false }} component={RestaurantMerchantDetails} />
             <Stack.Screen name="Notifications" options={{ headerShown: false }} component={NotificationsScreen} />
           </>
         ) : (
