@@ -7,10 +7,9 @@ import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
-    ChevronLeftIcon, MagnifyingGlassIcon,
-    ClockIcon, PlusIcon,
-    HeartIcon, TruckIcon, ShieldCheckIcon,
-    MapPinIcon, TagIcon
+    ChevronLeftIcon, MagnifyingGlassIcon, ClockIcon, PlusIcon,
+    HeartIcon, TruckIcon, ShieldCheckIcon, MapPinIcon, TagIcon,
+    BarsArrowDownIcon, BarsArrowUpIcon
 } from 'react-native-heroicons/outline';
 import { HeartIcon as HeartIconSolid } from 'react-native-heroicons/solid';
 import { StatusBar } from 'expo-status-bar';
@@ -85,6 +84,7 @@ const RestaurantMerchantDetails = () => {
     const [activeCategory, setActiveCategory] = useState('All');
     const [categories, setCategories] = useState(['All']);
     const [searchQuery, setSearchQuery] = useState('');
+    const [sortOrder, setSortOrder] = useState('asc'); // 'asc' = A-Z, 'desc' = Z-A
     const [endorsed, setEndorsed] = useState(false);
     const [endorsing, setEndorsing] = useState(false);
 
@@ -313,14 +313,24 @@ const RestaurantMerchantDetails = () => {
 
     // Filter foods by search query (client-side, under current merchant)
     const filteredFoods = useMemo(() => {
-        if (!searchQuery.trim()) return foods;
-        const q = searchQuery.toLowerCase();
-        return foods.filter(f =>
-            (f.name || '').toLowerCase().includes(q) ||
-            (f.description || '').toLowerCase().includes(q) ||
-            (f.category || '').toLowerCase().includes(q)
-        );
-    }, [foods, searchQuery]);
+        let result = foods;
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
+            result = foods.filter(f =>
+                (f.name || '').toLowerCase().includes(q) ||
+                (f.description || '').toLowerCase().includes(q) ||
+                (f.category || '').toLowerCase().includes(q)
+            );
+        }
+        // Apply A-Z / Z-A sort
+        return [...result].sort((a, b) => {
+            const nameA = (a.name || '').toLowerCase();
+            const nameB = (b.name || '').toLowerCase();
+            return sortOrder === 'asc'
+                ? nameA.localeCompare(nameB)
+                : nameB.localeCompare(nameA);
+        });
+    }, [foods, searchQuery, sortOrder]);
 
     const handleEndorse = useCallback(async () => {
         const user = auth.currentUser;
@@ -458,7 +468,7 @@ const RestaurantMerchantDetails = () => {
         if (item.type === 'categories') {
             return (
                 <View style={styles.categoryContainer}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20 }}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, flex: 1 }}>
                         {categories.map(cat => (
                             <TouchableOpacity
                                 key={cat}
@@ -469,6 +479,15 @@ const RestaurantMerchantDetails = () => {
                             </TouchableOpacity>
                         ))}
                     </ScrollView>
+                    <TouchableOpacity
+                        onPress={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                        style={styles.sortBtn}
+                    >
+                        {sortOrder === 'asc'
+                            ? <BarsArrowDownIcon size={22} color="#1F2937" />
+                            : <BarsArrowUpIcon size={22} color="#10B981" />
+                        }
+                    </TouchableOpacity>
                 </View>
             );
         }
@@ -668,6 +687,8 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         borderBottomWidth: 1,
         borderBottomColor: '#F3F4F6',
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     categoryBtn: {
         marginRight: 20,
@@ -684,6 +705,12 @@ const styles = StyleSheet.create({
     },
     categoryTextActive: {
         color: '#1F2937',
+    },
+    sortBtn: {
+        paddingHorizontal: 14,
+        paddingVertical: 6,
+        borderLeftWidth: 1,
+        borderLeftColor: '#F3F4F6',
     },
     foodCard: {
         flexDirection: 'row',
